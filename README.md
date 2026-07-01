@@ -120,10 +120,13 @@ If your Supabase project was set up before the **designation** field and **role-
 ## 6. Handover Checklist
 
 - [x] Supabase project created and `schema.sql` run (project: `mffuhbgpjcjrhfgxpunu`)
-- [x] Admin user created in Supabase Auth (`admin_users` row auto-created via trigger)
+- [x] Migration v2 applied (designation field + admin/viewer roles)
+- [x] Admin user created and set to `role = 'admin'`
 - [x] Frontend connected to Supabase (`config/supabase.js` populated)
 - [x] Deployed to Vercel — live at https://uhs-pims.vercel.app
 - [x] Supabase Auth **Site URL** + **Redirect URLs** set to the Vercel domain
-- [x] `database/schema.sql` and `seed.sql` provided for backup/restore
-- [x] This README as the user/deployment manual
+- [x] Admin & read-only viewer roles verified end-to-end (UI + database RLS)
+- [x] `database/schema.sql`, `seed.sql` and migration provided for backup/restore
+- [x] `README.md` (technical) and `HANDOVER.md` (client one-pager) as manuals
+- [ ] Delete the temporary `viewer-test` account used for role testing
 - [ ] Admin credentials handed to the client, and password rotated to a client-owned secret
