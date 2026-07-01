@@ -1,13 +1,16 @@
 /**
  * UHS-PIMS — First-time Onboarding Guide
  * Shows a step-by-step welcome tour the first time the app is opened on a
- * device/browser (tracked in localStorage). Can be replayed anytime via
+ * device/browser (tracked in localStorage, per role). Content adapts to the
+ * signed-in user's role: admins get the full workflow tour, read-only
+ * viewers get a browse/report-focused tour. Replayable anytime via
  * Onboarding.open() (wired to the sidebar "Help & Guide" link).
  */
 const Onboarding = {
-  STORAGE_KEY: "uhs-pims:onboarded:v1",
+  STORAGE_KEY: "uhs-pims:onboarded:v2",
 
-  steps: [
+  // Full tour for admins (read + write).
+  ADMIN_STEPS: [
     {
       icon: "bi-flower1",
       title: "Welcome to UHS-PIMS",
@@ -21,7 +24,7 @@ const Onboarding = {
     {
       icon: "bi-flower3",
       title: "Step 2 — Add & manage projects",
-      text: "Go to <b>Projects → Add Project</b> to record a study: title, investigators, department, funding, cost, timeline and status. Use the search box and filters to find any project instantly, and the pencil/trash icons to edit or remove."
+      text: "Go to <b>Projects → Add Project</b> to record a study: title, investigators, designation, department, funding, cost, timeline and status. Use the search box and filters to find any project instantly, and the pencil/trash icons to edit or remove."
     },
     {
       icon: "bi-speedometer2",
@@ -31,17 +34,57 @@ const Onboarding = {
     {
       icon: "bi-file-earmark-bar-graph",
       title: "Step 4 — Generate reports",
-      text: "Under <b>Reports</b>, filter by year, status, funding type, department or college, then export the result to <b>PDF</b> or <b>Excel</b> in one click — ready to share or print."
+      text: "Under <b>Reports</b>, filter by year, status, funding type, department, college, designation or duration, then export the result to <b>PDF</b> or <b>Excel</b> in one click — ready to share or print."
     },
     {
       icon: "bi-person-circle",
-      title: "Step 5 — Your account",
-      text: "Open <b>Profile</b> to change your password anytime. Use <b>Log out</b> at the bottom of the sidebar when you're done. You can replay this guide whenever you like from <b>Help &amp; Guide</b> in the sidebar."
+      title: "Step 5 — Your account & users",
+      text: "Open <b>Profile</b> to change your password. New accounts are created in Supabase and default to read-only; an admin promotes them if needed. Replay this guide anytime from <b>Help &amp; Guide</b> in the sidebar."
     }
   ],
 
+  // Focused tour for read-only viewers (no create/edit/delete).
+  VIEWER_STEPS: [
+    {
+      icon: "bi-flower1",
+      title: "Welcome to UHS-PIMS",
+      text: "You have <b>read-only access</b> — you can browse every research project and generate reports, but not add or change data. Here's a quick tour of what you can do. It takes under a minute."
+    },
+    {
+      icon: "bi-search",
+      title: "Browse & search projects",
+      text: "Open <b>Projects</b> to see all research projects. Use the search box and the status / funding / department filters to find exactly what you need, and click a project to view its full details."
+    },
+    {
+      icon: "bi-speedometer2",
+      title: "Read the dashboard",
+      text: "The <b>Dashboard</b> shows live totals, total sanctioned funding, and status &amp; funding-agency charts — a quick overview of the whole research portfolio."
+    },
+    {
+      icon: "bi-file-earmark-bar-graph",
+      title: "Generate & export reports",
+      text: "Under <b>Reports</b>, filter by year, status, funding type, department, college, designation or duration, then export to <b>PDF</b> or <b>Excel</b> in one click."
+    },
+    {
+      icon: "bi-person-circle",
+      title: "Your account",
+      text: "Open <b>Profile</b> to change your password. To add or edit project data, contact your DR Office administrator. Replay this guide anytime from <b>Help &amp; Guide</b> in the sidebar."
+    }
+  ],
+
+  steps: [],
   _current: 0,
   _modal: null,
+  _role: "admin",
+  _storageKey: null,
+
+  async _resolve() {
+    let role = "admin";
+    try { if (typeof Auth !== "undefined") role = (await Auth.getRole()) || "admin"; } catch (_) {}
+    this._role = role;
+    this.steps = role === "admin" ? this.ADMIN_STEPS : this.VIEWER_STEPS;
+    this._storageKey = this.STORAGE_KEY + ":" + role;
+  },
 
   _ensureDom() {
     if (document.getElementById("uhsOnboarding")) return;
@@ -97,22 +140,24 @@ const Onboarding = {
   },
 
   _finish() {
-    try { localStorage.setItem(this.STORAGE_KEY, "1"); } catch (_) {}
+    try { localStorage.setItem(this._storageKey || (this.STORAGE_KEY + ":" + this._role), "1"); } catch (_) {}
     this._modal?.hide();
   },
 
   /** Manually open the tour from step 0 (used by the Help link). */
-  open() {
+  async open() {
+    await this._resolve();
     this._ensureDom();
     this._current = 0;
     this._render();
     this._modal.show();
   },
 
-  /** Auto-show on first visit for this device/browser. */
-  init() {
+  /** Auto-show on first visit for this device/browser + role. */
+  async init() {
+    await this._resolve();
     let seen = null;
-    try { seen = localStorage.getItem(this.STORAGE_KEY); } catch (_) {}
+    try { seen = localStorage.getItem(this._storageKey); } catch (_) {}
     if (!seen) this.open();
   }
 };
