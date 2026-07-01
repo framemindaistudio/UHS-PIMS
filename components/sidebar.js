@@ -53,7 +53,7 @@ function renderSidebar(activeKey) {
 
   document.getElementById("helpLink").addEventListener("click", (e) => {
     e.preventDefault();
-    if (window.Onboarding) {
+    if (typeof Onboarding !== "undefined") {
       Onboarding.open();
     } else {
       // Onboarding script not on this page — go to dashboard where it lives
@@ -82,7 +82,7 @@ function renderSidebar(activeKey) {
   // Apply read-only gating for non-admin (viewer) accounts.
   (async () => {
     try {
-      if (window.Auth && !(await Auth.isAdmin())) {
+      if (typeof Auth !== "undefined" && !(await Auth.isAdmin())) {
         document.body.classList.add("role-viewer");
       }
     } catch (_) { /* leave as admin-capable; RLS still enforces writes */ }

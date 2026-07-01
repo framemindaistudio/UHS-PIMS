@@ -13,8 +13,11 @@
 alter table projects add column if not exists designation text;
 create index if not exists idx_projects_designation on projects (designation);
 
--- Recreate the frontend view to include designation
-create or replace view projects_view as
+-- Recreate the frontend view to include designation.
+-- (Dropped first because CREATE OR REPLACE VIEW cannot insert a column
+--  in the middle of an existing view's column list.)
+drop view if exists projects_view;
+create view projects_view as
 select
   p.id,
   p.title,
