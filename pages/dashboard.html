@@ -165,6 +165,7 @@
 <script src="../components/footer.js"></script>
 <script src="../assets/js/utils.js"></script>
 <script src="../assets/js/data.js"></script>
+<script src="../components/onboarding.js"></script>
 <script>
 (async () => {
   const session = await Auth.requireAuth();
@@ -173,6 +174,9 @@
   renderSidebar("dashboard");
   renderTopbar("Dashboard");
   renderFooter();
+
+  // First-time welcome tour (once per device/browser)
+  Onboarding.init();
 
   // ---- Welcome header (time-based greeting + admin name + date) ----
   const hour = new Date().getHours();

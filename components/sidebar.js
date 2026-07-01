@@ -35,7 +35,11 @@ function renderSidebar(activeKey) {
       </div>
       <nav class="uhs-nav">
         ${links}
-        <a href="#" id="logoutLink" class="uhs-nav-link text-warning mt-3">
+        <a href="#" id="helpLink" class="uhs-nav-link mt-3">
+          <i class="bi bi-question-circle"></i>
+          <span>Help &amp; Guide</span>
+        </a>
+        <a href="#" id="logoutLink" class="uhs-nav-link text-warning">
           <i class="bi bi-box-arrow-right"></i>
           <span>Logout</span>
         </a>
@@ -46,6 +50,16 @@ function renderSidebar(activeKey) {
     </div>
     <div class="uhs-sidebar-overlay" id="uhsSidebarOverlay"></div>
   `;
+
+  document.getElementById("helpLink").addEventListener("click", (e) => {
+    e.preventDefault();
+    if (window.Onboarding) {
+      Onboarding.open();
+    } else {
+      // Onboarding script not on this page — go to dashboard where it lives
+      window.location.href = SIDEBAR_LINKS[0].href;
+    }
+  });
 
   document.getElementById("logoutLink").addEventListener("click", async (e) => {
     e.preventDefault();
