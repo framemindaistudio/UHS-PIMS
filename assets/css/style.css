@@ -319,55 +319,95 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
   flex: 1.1;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(200deg, var(--uhs-green-500) 0%, var(--uhs-green-900) 100%);
+  background: linear-gradient(150deg, #3AA65A 0%, #2E8B45 42%, #143F22 100%);
   color: #fff;
-  padding: 4rem;
+  padding: 4.5rem;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
 }
 
-.login-visual::before,
+/* Soft dot texture */
+.login-visual::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.09) 1.4px, transparent 1.4px);
+  background-size: 26px 26px;
+  opacity: .55;
+  pointer-events: none;
+}
+/* Soft gold glow */
 .login-visual::after {
   content: "";
   position: absolute;
+  width: 520px; height: 520px;
+  top: -180px; right: -170px;
   border-radius: 50%;
-  filter: blur(60px);
+  background: radial-gradient(circle, rgba(232,179,77,0.34), transparent 68%);
+  filter: blur(24px);
   pointer-events: none;
-}
-.login-visual::before {
-  width: 420px; height: 420px;
-  background: radial-gradient(circle, rgba(232,179,77,0.45), transparent 70%);
-  top: -120px; right: -100px;
-  animation: floatSlow 9s ease-in-out infinite;
-}
-.login-visual::after {
-  width: 340px; height: 340px;
-  background: radial-gradient(circle, rgba(79,182,232,0.35), transparent 70%);
-  bottom: -100px; left: -80px;
-  animation: floatSlow 11s ease-in-out infinite reverse;
-}
-
-.login-visual-icon {
-  position: absolute;
-  opacity: .16;
-  color: #fff;
+  animation: floatSlow 12s ease-in-out infinite;
 }
 
 .login-visual-content { position: relative; z-index: 2; }
-.login-visual-content .logo-circle {
-  width: 60px; height: 60px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, var(--uhs-gold-400), var(--uhs-gold-600));
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.5rem;
-  color: var(--uhs-green-900);
-  margin-bottom: 1.75rem;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.2);
-}
-.login-visual-content h2 { font-size: 2rem; font-weight: 800; max-width: 420px; line-height: 1.25; }
-.login-visual-content p { opacity: .85; max-width: 380px; margin-top: 1rem; }
 
-.login-visual-footer { position: relative; z-index: 2; font-size: .82rem; opacity: .7; }
+.lv-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  background: rgba(255,255,255,0.13);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 50px;
+  padding: .45rem 1.05rem;
+  font-size: .76rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+  margin-bottom: 2.75rem;
+  backdrop-filter: blur(4px);
+}
+.lv-badge i { color: var(--uhs-gold-400); }
+
+.login-visual-content h2 {
+  font-size: clamp(2.25rem, 3.4vw, 3.1rem);
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 1.15;
+  letter-spacing: -.01em;
+  margin: 0;
+  white-space: nowrap;
+}
+.login-visual-content p {
+  opacity: .82;
+  max-width: 420px;
+  margin-top: 2rem;
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.lv-features {
+  list-style: none;
+  padding: 0;
+  margin: 3rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+}
+.lv-features li {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  font-size: .96rem;
+  opacity: .92;
+}
+.lv-features li i { color: var(--uhs-gold-400); font-size: 1.1rem; flex-shrink: 0; }
+
+.login-visual-footer {
+  position: absolute;
+  left: 4.5rem; bottom: 2.75rem;
+  z-index: 2;
+  font-size: .82rem;
+  opacity: .68;
+}
 
 .login-form-panel {
   flex: 1;
