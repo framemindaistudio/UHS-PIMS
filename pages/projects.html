@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Projects — UHS-PIMS</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -26,7 +27,10 @@
           <h5 class="fw-bold mb-0">Projects</h5>
           <p class="text-muted small mb-0">Manage all research projects</p>
         </div>
-        <a href="project-form.html" class="btn btn-uhs-primary admin-only"><i class="bi bi-plus-lg"></i> Add Project</a>
+        <div class="d-flex gap-2 admin-only">
+          <button class="btn btn-outline-success" id="importBtn"><i class="bi bi-file-earmark-arrow-up"></i> Import Excel</button>
+          <a href="project-form.html" class="btn btn-uhs-primary"><i class="bi bi-plus-lg"></i> Add Project</a>
+        </div>
       </div>
 
       <!-- Search & Filters -->
@@ -110,8 +114,41 @@
   </div>
 </div>
 
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title fw-bold"><i class="bi bi-file-earmark-arrow-up text-success me-1"></i> Import Projects from Excel / CSV</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small">
+          Already have your projects in a spreadsheet? Upload it here to add them all at once.
+          Match your columns to the template below — College, Department and Funding Agency are matched by name
+          (create them first under their pages if they don't exist yet).
+        </p>
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+          <button class="btn btn-sm btn-outline-secondary" id="downloadTemplateBtn"><i class="bi bi-download"></i> Download template</button>
+          <label class="btn btn-sm btn-uhs-primary mb-0">
+            <i class="bi bi-upload"></i> Choose file
+            <input type="file" id="importFile" accept=".xlsx,.xls,.csv" hidden>
+          </label>
+          <span class="small text-muted" id="importFileName"></span>
+        </div>
+        <div id="importPreview"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-uhs-primary" id="confirmImportBtn" disabled><i class="bi bi-check-lg"></i> Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="../config/supabase.js"></script>
 <script src="../config/config.js"></script>
 <script src="../components/auth.js"></script>
@@ -238,6 +275,161 @@ document.getElementById("confirmDeleteBtn").addEventListener("click", async () =
   }
 });
 
+/* ---------------- Excel / CSV Import ---------------- */
+const TEMPLATE_HEADERS = [
+  "Title", "Principal Investigator", "Co-PI", "Designation", "College", "Department",
+  "Funding Agency", "Funding Type", "Project Cost", "Start Date", "End Date", "Status", "Remarks"
+];
+let importRows = [];          // validated payloads ready to insert
+let importCaches = null;      // { colleges, departments, agencies }
+
+function downloadTemplate() {
+  const example = {
+    "Title": "Evaluation of Mango Hybrids",
+    "Principal Investigator": "Dr. A. Sharma",
+    "Co-PI": "Dr. R. Naik",
+    "Designation": "Professor",
+    "College": "College of Horticulture, Bagalkot",
+    "Department": "Department of Fruit Science",
+    "Funding Agency": "ICAR",
+    "Funding Type": "External Funded",
+    "Project Cost": 1850000,
+    "Start Date": "2023-04-01",
+    "End Date": "2026-03-31",
+    "Status": "Ongoing",
+    "Remarks": "Field trials in progress"
+  };
+  const ws = XLSX.utils.json_to_sheet([example], { header: TEMPLATE_HEADERS });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Projects");
+  XLSX.writeFile(wb, "UHS-PIMS-Import-Template.xlsx");
+}
+
+function findByName(list, name) {
+  if (!name) return undefined;
+  const n = String(name).trim().toLowerCase();
+  return list.find(x => (x.name || "").trim().toLowerCase() === n);
+}
+
+function toDate(val) {
+  if (val === null || val === undefined || val === "") return null;
+  // Excel serial date number
+  if (typeof val === "number") {
+    const d = XLSX.SSF ? XLSX.SSF.parse_date_code(val) : null;
+    if (d) return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
+  }
+  const d = new Date(val);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
+async function handleImportFile(file) {
+  const preview = document.getElementById("importPreview");
+  const confirmBtn = document.getElementById("confirmImportBtn");
+  importRows = [];
+  confirmBtn.disabled = true;
+  preview.innerHTML = `<div class="text-muted small">Reading ${Utils.escapeHtml(file.name)}...</div>`;
+
+  if (!importCaches) {
+    importCaches = {
+      colleges: await DataService.listColleges(),
+      departments: await DataService.listDepartments(),
+      agencies: await DataService.listFundingAgencies()
+    };
+  }
+
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array" });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const raw = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+  const errors = [];
+  const valid = [];
+  raw.forEach((row, i) => {
+    const rowNum = i + 2; // header is row 1
+    const get = (k) => (row[k] !== undefined ? String(row[k]).trim() : "");
+    const title = get("Title");
+    const pi = get("Principal Investigator");
+    const fundingType = get("Funding Type");
+    let status = get("Status") || "Ongoing";
+    const rowErrs = [];
+
+    if (!title) rowErrs.push("missing Title");
+    if (!pi) rowErrs.push("missing Principal Investigator");
+    if (fundingType && !APP_CONFIG.fundingTypes.includes(fundingType)) rowErrs.push(`invalid Funding Type "${fundingType}"`);
+    if (!fundingType) rowErrs.push("missing Funding Type");
+    if (!APP_CONFIG.statusOptions.includes(status)) rowErrs.push(`invalid Status "${status}"`);
+
+    const college = get("College") ? findByName(importCaches.colleges, get("College")) : null;
+    if (get("College") && !college) rowErrs.push(`College "${get("College")}" not found`);
+    const dept = get("Department") ? findByName(importCaches.departments, get("Department")) : null;
+    if (get("Department") && !dept) rowErrs.push(`Department "${get("Department")}" not found`);
+    const agency = get("Funding Agency") ? findByName(importCaches.agencies, get("Funding Agency")) : null;
+    if (get("Funding Agency") && !agency) rowErrs.push(`Funding Agency "${get("Funding Agency")}" not found`);
+
+    if (rowErrs.length) { errors.push({ rowNum, title, msg: rowErrs.join("; ") }); return; }
+
+    const start = toDate(row["Start Date"]);
+    const end = toDate(row["End Date"]);
+    valid.push({
+      title,
+      principal_investigator: pi,
+      co_principal_investigator: get("Co-PI") || null,
+      designation: get("Designation") || null,
+      college_id: college ? college.id : null,
+      department_id: dept ? dept.id : null,
+      funding_agency_id: agency ? agency.id : null,
+      funding_type: fundingType,
+      project_cost: Number(row["Project Cost"]) || 0,
+      start_date: start,
+      end_date: end,
+      duration_months: Utils.computeDurationMonths(start, end),
+      status,
+      remarks: get("Remarks") || null
+    });
+  });
+
+  importRows = valid;
+  let html = "";
+  if (raw.length === 0) {
+    html = `<div class="alert alert-warning py-2 small mb-0">The file has no rows.</div>`;
+  } else {
+    html += `<div class="d-flex gap-3 mb-2">
+      <span class="badge bg-success">${valid.length} ready to import</span>
+      ${errors.length ? `<span class="badge bg-danger">${errors.length} skipped</span>` : ""}
+    </div>`;
+    if (errors.length) {
+      html += `<div class="table-responsive" style="max-height:200px;overflow:auto;">
+        <table class="table table-sm small mb-0"><thead><tr><th>Row</th><th>Title</th><th>Problem</th></tr></thead><tbody>`;
+      errors.forEach(e => {
+        html += `<tr><td>${e.rowNum}</td><td>${Utils.escapeHtml(e.title || "—")}</td><td class="text-danger">${Utils.escapeHtml(e.msg)}</td></tr>`;
+      });
+      html += `</tbody></table></div>`;
+    }
+  }
+  preview.innerHTML = html;
+  confirmBtn.disabled = valid.length === 0;
+}
+
+async function runImport() {
+  const btn = document.getElementById("confirmImportBtn");
+  if (importRows.length === 0) return;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Importing...`;
+  try {
+    await DataService.addProjectsBulk(importRows);
+    bootstrap.Modal.getInstance(document.getElementById("importModal")).hide();
+    Utils.toast(`${importRows.length} project(s) imported successfully.`);
+    importRows = [];
+    importCaches = null;
+    loadProjects();
+  } catch (err) {
+    Utils.toast("Import failed: " + err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<i class="bi bi-check-lg"></i> Import`;
+  }
+}
+
 (async () => {
   const session = await Auth.requireAuth();
   if (!session) return;
@@ -248,6 +440,24 @@ document.getElementById("confirmDeleteBtn").addEventListener("click", async () =
 
   await loadFilterOptions();
   await loadProjects();
+
+  document.getElementById("importBtn").addEventListener("click", () => {
+    document.getElementById("importPreview").innerHTML = "";
+    document.getElementById("importFileName").textContent = "";
+    document.getElementById("importFile").value = "";
+    document.getElementById("confirmImportBtn").disabled = true;
+    new bootstrap.Modal(document.getElementById("importModal")).show();
+  });
+  document.getElementById("downloadTemplateBtn").addEventListener("click", downloadTemplate);
+  document.getElementById("importFile").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    document.getElementById("importFileName").textContent = file.name;
+    handleImportFile(file).catch(err => {
+      document.getElementById("importPreview").innerHTML = `<div class="alert alert-danger py-2 small mb-0">Could not read file: ${Utils.escapeHtml(err.message)}</div>`;
+    });
+  });
+  document.getElementById("confirmImportBtn").addEventListener("click", runImport);
 
   document.getElementById("searchInput").addEventListener("input", Utils.debounce(loadProjects, 350));
   document.getElementById("filterStatus").addEventListener("change", loadProjects);

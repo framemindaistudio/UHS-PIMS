@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Reports — UHS-PIMS</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -230,12 +231,18 @@ function exportPdf() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: "landscape" });
 
-  doc.setFontSize(14);
-  doc.setTextColor(46, 125, 50);
-  doc.text("UHS-PIMS — Project Report", 14, 15);
+  // Branded header band
+  doc.setFillColor(34, 102, 55);
+  doc.rect(0, 0, doc.internal.pageSize.getWidth(), 24, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(15);
+  doc.text("University of Horticultural Sciences", 14, 11);
+  doc.setFontSize(10);
+  doc.setTextColor(232, 179, 77);
+  doc.text("UHS-PIMS — Project Report", 14, 18);
   doc.setFontSize(9);
-  doc.setTextColor(100);
-  doc.text(`Generated: ${new Date().toLocaleString("en-IN")} | Total Records: ${lastResults.length}`, 14, 21);
+  doc.setTextColor(90);
+  doc.text(`Generated: ${new Date().toLocaleString("en-IN")}  |  Total Records: ${lastResults.length}`, 14, 31);
 
   const rows = lastResults.map(p => [
     p.title, p.principal_investigator, p.designation || "—", p.department_name || "—", p.college_name || "—",
@@ -244,7 +251,7 @@ function exportPdf() {
   ]);
 
   doc.autoTable({
-    startY: 26,
+    startY: 36,
     head: [["Title", "PI", "Designation", "Department", "College", "Agency", "Funding Type", "Cost", "Start", "End", "Status"]],
     body: rows,
     styles: { fontSize: 7, cellPadding: 2 },

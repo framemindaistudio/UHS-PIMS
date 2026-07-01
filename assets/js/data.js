@@ -101,6 +101,10 @@ const DataService = {
     const { error } = await supabaseClient.from("projects").insert(payload);
     if (error) throw error;
   },
+  async addProjectsBulk(payloads) {
+    const { error } = await supabaseClient.from("projects").insert(payloads);
+    if (error) throw error;
+  },
   async updateProject(id, payload) {
     const { error } = await supabaseClient.from("projects").update(payload).eq("id", id);
     if (error) throw error;
@@ -124,6 +128,8 @@ const DataService = {
       totalFunding: data.reduce((sum, p) => sum + Number(p.project_cost || 0), 0),
       byStatus: {},
       byAgency: {},
+      byYear: {},
+      byCollege: {},
       recent: [...data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5)
     };
 
@@ -131,6 +137,12 @@ const DataService = {
       stats.byStatus[p.status] = (stats.byStatus[p.status] || 0) + 1;
       const agency = p.funding_agency_name || "Unspecified";
       stats.byAgency[agency] = (stats.byAgency[agency] || 0) + 1;
+      if (p.start_date) {
+        const yr = new Date(p.start_date).getFullYear();
+        if (!Number.isNaN(yr)) stats.byYear[yr] = (stats.byYear[yr] || 0) + 1;
+      }
+      const college = p.college_name || "Unspecified";
+      stats.byCollege[college] = (stats.byCollege[college] || 0) + 1;
     });
 
     return stats;
