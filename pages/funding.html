@@ -25,7 +25,7 @@
           <h5 class="fw-bold mb-0">Funding Agencies</h5>
           <p class="text-muted small mb-0">Maintain funding agency master data (ICAR, DST, DBT, University, etc.)</p>
         </div>
-        <button class="btn btn-uhs-primary" data-bs-toggle="modal" data-bs-target="#agencyModal" onclick="openAddModal()">
+        <button class="btn btn-uhs-primary admin-only" data-bs-toggle="modal" data-bs-target="#agencyModal" onclick="openAddModal()">
           <i class="bi bi-plus-lg"></i> Add Agency
         </button>
       </div>
@@ -33,7 +33,7 @@
       <div class="uhs-card p-3">
         <div class="table-responsive">
           <table class="table table-uhs align-middle mb-0">
-            <thead><tr><th>Name</th><th>Type</th><th class="text-end">Actions</th></tr></thead>
+            <thead><tr><th>Name</th><th>Type</th><th class="text-end admin-only">Actions</th></tr></thead>
             <tbody id="tableBody">
               <tr><td colspan="3" class="text-center text-muted py-4">Loading...</td></tr>
             </tbody>
@@ -146,7 +146,7 @@ async function loadAgencies() {
       <tr>
         <td class="fw-semibold">${Utils.escapeHtml(a.name)}</td>
         <td>${Utils.escapeHtml(a.agency_type || "—")}</td>
-        <td class="text-end">
+        <td class="text-end admin-only">
           <button class="btn btn-sm btn-outline-secondary me-1" onclick="openEditModal('${a.id}', '${Utils.escapeHtml(a.name).replace(/'/g,"\\'")}', '${a.agency_type || ""}')"><i class="bi bi-pencil"></i></button>
           <button class="btn btn-sm btn-outline-danger" onclick="openDeleteModal('${a.id}', '${Utils.escapeHtml(a.name).replace(/'/g,"\\'")}')"><i class="bi bi-trash"></i></button>
         </td>

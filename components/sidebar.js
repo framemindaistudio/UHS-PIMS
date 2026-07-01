@@ -78,6 +78,15 @@ function renderSidebar(activeKey) {
     document.getElementById("uhsSidebar").classList.remove("show");
     overlay.classList.remove("show");
   });
+
+  // Apply read-only gating for non-admin (viewer) accounts.
+  (async () => {
+    try {
+      if (window.Auth && !(await Auth.isAdmin())) {
+        document.body.classList.add("role-viewer");
+      }
+    } catch (_) { /* leave as admin-capable; RLS still enforces writes */ }
+  })();
 }
 
 function toggleSidebar() {

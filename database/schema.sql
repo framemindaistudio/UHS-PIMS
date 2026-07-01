@@ -46,6 +46,7 @@ create table if not exists projects (
   title text not null,
   principal_investigator text not null,
   co_principal_investigator text,
+  designation text, -- PI's designation / position (e.g. Professor, Scientist)
   department_id uuid references departments(id) on delete set null,
   college_id uuid references colleges(id) on delete set null,
   funding_agency_id uuid references funding_agencies(id) on delete set null,
@@ -68,6 +69,7 @@ create index if not exists idx_projects_department on projects (department_id);
 create index if not exists idx_projects_college on projects (college_id);
 create index if not exists idx_projects_agency on projects (funding_agency_id);
 create index if not exists idx_projects_start_date on projects (start_date);
+create index if not exists idx_projects_designation on projects (designation);
 
 -- Keep updated_at fresh
 create or replace function set_updated_at()
@@ -86,13 +88,28 @@ for each row execute function set_updated_at();
 -- ------------------------------------------------------------
 -- 5. ADMIN USERS (profile table linked to Supabase Auth)
 -- ------------------------------------------------------------
+-- Roles: 'admin' (read + write) or 'user' (read-only viewer).
+-- New accounts default to read-only 'user'; promote to 'admin' explicitly.
 create table if not exists admin_users (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text,
   email text,
-  role text not null default 'admin',
+  role text not null default 'user',
   created_at timestamptz not null default now()
 );
+
+-- Helper: is the current auth user an admin? (security definer avoids RLS recursion)
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.admin_users
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
 
 -- ============================================================
 -- ROW LEVEL SECURITY
@@ -104,29 +121,32 @@ alter table funding_agencies enable row level security;
 alter table projects enable row level security;
 alter table admin_users enable row level security;
 
+-- Read: any authenticated user (admin or read-only user).
+-- Write: admins only (enforced via public.is_admin()).
+
 -- Colleges
 create policy "Authenticated read colleges" on colleges for select using (auth.role() = 'authenticated');
-create policy "Authenticated write colleges" on colleges for insert with check (auth.role() = 'authenticated');
-create policy "Authenticated update colleges" on colleges for update using (auth.role() = 'authenticated');
-create policy "Authenticated delete colleges" on colleges for delete using (auth.role() = 'authenticated');
+create policy "Admin write colleges" on colleges for insert with check (public.is_admin());
+create policy "Admin update colleges" on colleges for update using (public.is_admin());
+create policy "Admin delete colleges" on colleges for delete using (public.is_admin());
 
 -- Departments
 create policy "Authenticated read departments" on departments for select using (auth.role() = 'authenticated');
-create policy "Authenticated write departments" on departments for insert with check (auth.role() = 'authenticated');
-create policy "Authenticated update departments" on departments for update using (auth.role() = 'authenticated');
-create policy "Authenticated delete departments" on departments for delete using (auth.role() = 'authenticated');
+create policy "Admin write departments" on departments for insert with check (public.is_admin());
+create policy "Admin update departments" on departments for update using (public.is_admin());
+create policy "Admin delete departments" on departments for delete using (public.is_admin());
 
 -- Funding Agencies
 create policy "Authenticated read funding_agencies" on funding_agencies for select using (auth.role() = 'authenticated');
-create policy "Authenticated write funding_agencies" on funding_agencies for insert with check (auth.role() = 'authenticated');
-create policy "Authenticated update funding_agencies" on funding_agencies for update using (auth.role() = 'authenticated');
-create policy "Authenticated delete funding_agencies" on funding_agencies for delete using (auth.role() = 'authenticated');
+create policy "Admin write funding_agencies" on funding_agencies for insert with check (public.is_admin());
+create policy "Admin update funding_agencies" on funding_agencies for update using (public.is_admin());
+create policy "Admin delete funding_agencies" on funding_agencies for delete using (public.is_admin());
 
 -- Projects
 create policy "Authenticated read projects" on projects for select using (auth.role() = 'authenticated');
-create policy "Authenticated write projects" on projects for insert with check (auth.role() = 'authenticated');
-create policy "Authenticated update projects" on projects for update using (auth.role() = 'authenticated');
-create policy "Authenticated delete projects" on projects for delete using (auth.role() = 'authenticated');
+create policy "Admin write projects" on projects for insert with check (public.is_admin());
+create policy "Admin update projects" on projects for update using (public.is_admin());
+create policy "Admin delete projects" on projects for delete using (public.is_admin());
 
 -- Admin users (self read only)
 create policy "Self read admin_users" on admin_users for select using (auth.uid() = id);
@@ -158,6 +178,7 @@ select
   p.title,
   p.principal_investigator,
   p.co_principal_investigator,
+  p.designation,
   p.department_id,
   d.name as department_name,
   p.college_id,

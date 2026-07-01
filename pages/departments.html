@@ -25,7 +25,7 @@
           <h5 class="fw-bold mb-0">Departments</h5>
           <p class="text-muted small mb-0">Manage university departments</p>
         </div>
-        <button class="btn btn-uhs-primary" data-bs-toggle="modal" data-bs-target="#deptModal" onclick="openAddModal()">
+        <button class="btn btn-uhs-primary admin-only" data-bs-toggle="modal" data-bs-target="#deptModal" onclick="openAddModal()">
           <i class="bi bi-plus-lg"></i> Add Department
         </button>
       </div>
@@ -33,7 +33,7 @@
       <div class="uhs-card p-3">
         <div class="table-responsive">
           <table class="table table-uhs align-middle mb-0">
-            <thead><tr><th>Name</th><th>College</th><th class="text-end">Actions</th></tr></thead>
+            <thead><tr><th>Name</th><th>College</th><th class="text-end admin-only">Actions</th></tr></thead>
             <tbody id="tableBody">
               <tr><td colspan="3" class="text-center text-muted py-4">Loading...</td></tr>
             </tbody>
@@ -147,7 +147,7 @@ async function loadDepartments() {
       <tr>
         <td class="fw-semibold">${Utils.escapeHtml(d.name)}</td>
         <td>${Utils.escapeHtml(d.colleges?.name || "—")}</td>
-        <td class="text-end">
+        <td class="text-end admin-only">
           <button class="btn btn-sm btn-outline-secondary me-1" onclick="openEditModal('${d.id}', '${Utils.escapeHtml(d.name).replace(/'/g,"\\'")}', '${d.college_id || ""}')"><i class="bi bi-pencil"></i></button>
           <button class="btn btn-sm btn-outline-danger" onclick="openDeleteModal('${d.id}', '${Utils.escapeHtml(d.name).replace(/'/g,"\\'")}')"><i class="bi bi-trash"></i></button>
         </td>

@@ -55,6 +55,23 @@ const Auth = {
   async currentUserEmail() {
     const session = await this.getSession();
     return session?.user?.email || "Admin";
+  },
+
+  // Cached role of the logged-in user: 'admin' (read+write) or 'user' (read-only).
+  _role: undefined,
+  async getRole() {
+    if (this._role !== undefined) return this._role;
+    const session = await this.getSession();
+    if (!session) return (this._role = null);
+    const { data, error } = await supabaseClient
+      .from("admin_users").select("role").eq("id", session.user.id).single();
+    // Fail safe to the least-privileged role if the lookup fails.
+    this._role = error ? "user" : (data?.role || "user");
+    return this._role;
+  },
+
+  async isAdmin() {
+    return (await this.getRole()) === "admin";
   }
 };
 

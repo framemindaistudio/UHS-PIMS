@@ -46,6 +46,10 @@
               <label class="form-label fw-semibold">Co-Principal Investigator</label>
               <input type="text" class="form-control" id="coPi">
             </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Designation</label>
+              <select class="form-select" id="designation"><option value="">Select designation</option></select>
+            </div>
           </div>
         </div>
 
@@ -176,6 +180,9 @@ async function loadDropdowns() {
 
   const statusSel = document.getElementById("status");
   APP_CONFIG.statusOptions.forEach(s => statusSel.insertAdjacentHTML("beforeend", `<option value="${s}">${s}</option>`));
+
+  const designationSel = document.getElementById("designation");
+  APP_CONFIG.designationOptions.forEach(d => designationSel.insertAdjacentHTML("beforeend", `<option value="${d}">${d}</option>`));
 }
 
 // Auto-link department's college when a department is picked
@@ -220,6 +227,7 @@ async function loadExistingProject(id) {
   document.getElementById("title").value = p.title || "";
   document.getElementById("pi").value = p.principal_investigator || "";
   document.getElementById("coPi").value = p.co_principal_investigator || "";
+  document.getElementById("designation").value = p.designation || "";
   document.getElementById("college").value = p.college_id || "";
   document.getElementById("department").value = p.department_id || "";
   document.getElementById("fundingAgency").value = p.funding_agency_id || "";
@@ -237,6 +245,7 @@ function buildPayload() {
     title: document.getElementById("title").value.trim(),
     principal_investigator: document.getElementById("pi").value.trim(),
     co_principal_investigator: document.getElementById("coPi").value.trim() || null,
+    designation: document.getElementById("designation").value || null,
     college_id: document.getElementById("college").value || null,
     department_id: document.getElementById("department").value || null,
     funding_agency_id: document.getElementById("fundingAgency").value || null,
@@ -270,6 +279,14 @@ function buildPayload() {
     } catch (err) {
       Utils.toast("Failed to load project: " + err.message, "error");
     }
+  }
+
+  // Read-only viewers can see the form but not change/save it.
+  if (!(await Auth.isAdmin())) {
+    document.getElementById("formHeading").textContent = editId ? "View Project" : "Project";
+    document.querySelectorAll("#projectForm input, #projectForm select, #projectForm textarea")
+      .forEach(el => el.disabled = true);
+    document.getElementById("saveBtn").classList.add("d-none");
   }
 
   document.getElementById("projectForm").addEventListener("submit", async (e) => {

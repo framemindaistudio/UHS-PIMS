@@ -25,7 +25,13 @@ A lightweight, secure web app for the DR Office to manage research projects: add
 2. Enter the DR Office admin's email and a password. Tick **Auto Confirm User** (so no email verification step is required).
 3. This automatically creates a matching row in `admin_users` (via the trigger in `schema.sql`).
 
-> To add more admins later, repeat this step — there's no public sign-up page by design, since this is a single-admin-role MVP.
+> There's no public sign-up page by design — the DR Office creates accounts here.
+
+**Roles (admin vs. read-only viewer):** New accounts default to **read-only "user"** — they can view everything but cannot add/edit/delete. To make an account a full **admin**, run this in the SQL Editor (replace the email):
+> ```sql
+> update admin_users set role = 'admin' where email = 'person@uhsbagalkot.edu.in';
+> ```
+> Make sure your first/main DR Office account is set to `admin` this way. Additional data-entry admins or read-only viewers (e.g. college staff who should only view reports) are added the same way — create the user, then set their role.
 
 ### Step 4 — Connect the frontend to Supabase
 1. In Supabase: **Project Settings → API**.
@@ -96,16 +102,20 @@ uhs-pims/
 
 - **Authentication** — Supabase email/password login, protected pages, logout, password change.
 - **Dashboard** — stat cards (total / ongoing / completed / university / external funded), status & agency charts (Chart.js), recent projects table.
-- **Projects** — full CRUD, live search (title/PI/department/college/agency), filters (status, funding type, department).
+- **Projects** — full CRUD, live search (title/PI/department/college/agency), filters (status, funding type, department). Each project records the PI's **designation**.
 - **Departments / Colleges / Funding Agencies** — master-data CRUD via modals.
-- **Reports** — filter by year/status/funding type/department/college, export to **PDF** (jsPDF) and **Excel** (SheetJS).
+- **Reports** — filter by year, status, funding type, department, college, **designation** and **duration**; export to **PDF** (jsPDF) and **Excel** (SheetJS).
+- **Roles** — two-tier access: **admin** (read + write) and **viewer** (read-only). Write actions are hidden in the UI for viewers and blocked at the database by Row Level Security.
 - **Security** — Supabase Auth session gating on every page, Row Level Security on every table (only authenticated admins can read/write), no SQL string concatenation (Supabase client parameterizes everything), HTML-escaping on all rendered user data.
 
-## 5. Notes & Known Limits (MVP scope)
+## 5. Notes & Known Limits
 
-- Single admin role only (per the agreed scope) — multi-role (department/college coordinators, read-only) is future scope.
-- No file/document uploads yet (also future scope).
+- **Two roles**: admin (read + write) and read-only viewer. Finer-grained per-department/college permissions are future scope.
+- No file/document uploads yet (future scope).
 - `project_cost` is stored as a plain numeric column — for INR formatting at scale you may want to add currency config if other currencies are needed later.
+
+### Upgrading an existing database
+If your Supabase project was set up before the **designation** field and **role-based access** were added, run `database/migration-v2-designation-roles.sql` once in the SQL Editor. A brand-new install using the latest `schema.sql` already includes both.
 
 ## 6. Handover Checklist
 

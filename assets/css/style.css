@@ -449,6 +449,9 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 
 .cursor-pointer { cursor: pointer; }
 
+/* Read-only viewers: hide all write/admin-only controls */
+.role-viewer .admin-only { display: none !important; }
+
 .modal-content { border-radius: 18px; border: none; box-shadow: var(--uhs-shadow-lg); }
 .modal-header, .modal-footer { border-color: var(--uhs-border); }
 

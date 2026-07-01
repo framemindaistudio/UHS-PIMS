@@ -26,7 +26,7 @@
           <h5 class="fw-bold mb-0">Projects</h5>
           <p class="text-muted small mb-0">Manage all research projects</p>
         </div>
-        <a href="project-form.html" class="btn btn-uhs-primary"><i class="bi bi-plus-lg"></i> Add Project</a>
+        <a href="project-form.html" class="btn btn-uhs-primary admin-only"><i class="bi bi-plus-lg"></i> Add Project</a>
       </div>
 
       <!-- Search & Filters -->
@@ -74,7 +74,7 @@
                 <th>Funding Type</th>
                 <th>Cost</th>
                 <th>Status</th>
-                <th class="text-end">Actions</th>
+                <th class="text-end admin-only">Actions</th>
               </tr>
             </thead>
             <tbody id="projectsBody">
@@ -208,7 +208,7 @@ async function loadProjects() {
         <td>${Utils.escapeHtml(p.funding_type)}</td>
         <td>${Utils.formatCurrency(p.project_cost)}</td>
         <td>${Utils.statusBadge(p.status)}</td>
-        <td class="text-end">
+        <td class="text-end admin-only">
           <a href="project-form.html?id=${p.id}" class="btn btn-sm btn-outline-secondary me-1" title="Edit"><i class="bi bi-pencil"></i></a>
           <button class="btn btn-sm btn-outline-danger" title="Delete" onclick="openDeleteModal('${p.id}', '${Utils.escapeHtml(p.title).replace(/'/g, "\\'")}')"><i class="bi bi-trash"></i></button>
         </td>

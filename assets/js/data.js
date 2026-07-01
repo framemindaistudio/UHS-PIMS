@@ -78,8 +78,14 @@ const DataService = {
     if (filters.departmentId) query = query.eq("department_id", filters.departmentId);
     if (filters.collegeId) query = query.eq("college_id", filters.collegeId);
     if (filters.fundingAgencyId) query = query.eq("funding_agency_id", filters.fundingAgencyId);
+    if (filters.designation) query = query.eq("designation", filters.designation);
     if (filters.year) {
       query = query.gte("start_date", `${filters.year}-01-01`).lte("start_date", `${filters.year}-12-31`);
+    }
+    if (filters.durationBucket) {
+      const [min, max] = { "0-12": [0, 12], "13-24": [13, 24], "25-36": [25, 36], "37+": [37, null] }[filters.durationBucket] || [];
+      if (min !== undefined) query = query.gte("duration_months", min);
+      if (max !== null && max !== undefined) query = query.lte("duration_months", max);
     }
 
     const { data, error } = await query;

@@ -25,7 +25,7 @@
           <div class="uhs-card p-4">
             <h6 class="fw-bold mb-3">Account Information</h6>
             <div class="mb-2"><span class="text-muted small">Email</span><div class="fw-semibold" id="profileEmail">—</div></div>
-            <div class="mb-2"><span class="text-muted small">Role</span><div class="fw-semibold">DR Office Administrator</div></div>
+            <div class="mb-2"><span class="text-muted small">Role</span><div class="fw-semibold" id="profileRole">—</div></div>
             <div><span class="text-muted small">Account Created</span><div class="fw-semibold" id="profileCreated">—</div></div>
           </div>
         </div>
@@ -74,6 +74,10 @@
 
   document.getElementById("profileEmail").textContent = session.user.email;
   document.getElementById("profileCreated").textContent = Utils.formatDate(session.user.created_at);
+
+  const role = await Auth.getRole();
+  document.getElementById("profileRole").textContent =
+    role === "admin" ? "Administrator (full access)" : "Viewer (read-only)";
 
   document.getElementById("pwdForm").addEventListener("submit", async (e) => {
     e.preventDefault();
