@@ -5,6 +5,8 @@ A lightweight, secure web app for the DR Office to manage research projects: add
 
 **Stack:** HTML5 + Bootstrap 5.3 + vanilla JS (ES6) + Chart.js · Supabase (PostgreSQL + Auth) · Vercel hosting
 
+**🌐 Live app:** https://uhs-pims.vercel.app
+
 ---
 
 ## 1. Quick Start (≈15 minutes)
@@ -107,8 +109,11 @@ uhs-pims/
 
 ## 6. Handover Checklist
 
-- [ ] Supabase project URL + anon key shared with client (or client's own project created and schema run)
-- [ ] Admin user(s) created in Supabase Auth
-- [ ] `database/schema.sql` and `seed.sql` provided for backup/restore
-- [ ] Deployed Vercel URL shared
-- [ ] This README as the user/deployment manual
+- [x] Supabase project created and `schema.sql` run (project: `mffuhbgpjcjrhfgxpunu`)
+- [x] Admin user created in Supabase Auth (`admin_users` row auto-created via trigger)
+- [x] Frontend connected to Supabase (`config/supabase.js` populated)
+- [x] Deployed to Vercel — live at https://uhs-pims.vercel.app
+- [x] Supabase Auth **Site URL** + **Redirect URLs** set to the Vercel domain
+- [x] `database/schema.sql` and `seed.sql` provided for backup/restore
+- [x] This README as the user/deployment manual
+- [ ] Admin credentials handed to the client, and password rotated to a client-owned secret
