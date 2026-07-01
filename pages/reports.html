@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports — UHS-PIMS</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="../assets/css/style.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="uhs-app">
+  <div id="uhs-sidebar-mount"></div>
+
+  <div class="uhs-main">
+    <div id="uhs-topbar-mount"></div>
+
+    <div class="uhs-content">
+
+      <div class="mb-3">
+        <h5 class="fw-bold mb-0">Reports</h5>
+        <p class="text-muted small mb-0">Generate year-wise, department-wise, college-wise, agency-wise and status reports</p>
+      </div>
+
+      <!-- Filters -->
+      <div class="uhs-card p-3 mb-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-6 col-md-2">
+            <label class="form-label small fw-semibold mb-1">Year (start date)</label>
+            <select id="filterYear" class="form-select"><option value="">All Years</option></select>
+          </div>
+          <div class="col-6 col-md-2">
+            <label class="form-label small fw-semibold mb-1">Status</label>
+            <select id="filterStatus" class="form-select"><option value="">All</option></select>
+          </div>
+          <div class="col-6 col-md-2">
+            <label class="form-label small fw-semibold mb-1">Funding Type</label>
+            <select id="filterFundingType" class="form-select"><option value="">All</option></select>
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="form-label small fw-semibold mb-1">Department</label>
+            <select id="filterDepartment" class="form-select"><option value="">All Departments</option></select>
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="form-label small fw-semibold mb-1">College</label>
+            <select id="filterCollege" class="form-select"><option value="">All Colleges</option></select>
+          </div>
+        </div>
+        <div id="filterChips" class="uhs-chips mt-3 d-none"></div>
+      </div>
+
+      <!-- Summary + Export -->
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div id="reportSummary" class="text-muted small"></div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-danger btn-sm" id="exportPdfBtn"><i class="bi bi-filetype-pdf"></i> Export PDF</button>
+          <button class="btn btn-outline-success btn-sm" id="exportExcelBtn"><i class="bi bi-filetype-xlsx"></i> Export Excel</button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="uhs-card p-3">
+        <div class="table-responsive">
+          <table class="table table-uhs align-middle mb-0" id="reportTable">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>PI</th>
+                <th>Department</th>
+                <th>College</th>
+                <th>Funding Agency</th>
+                <th>Funding Type</th>
+                <th>Cost (₹)</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="reportBody">
+              <tr><td colspan="10" class="text-center text-muted py-4">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="uhs-footer-mount"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="../config/supabase.js"></script>
+<script src="../config/config.js"></script>
+<script src="../components/auth.js"></script>
+<script src="../components/sidebar.js"></script>
+<script src="../components/navbar.js"></script>
+<script src="../components/footer.js"></script>
+<script src="../assets/js/utils.js"></script>
+<script src="../assets/js/data.js"></script>
+<script>
+let lastResults = [];
+
+function currentFilters() {
+  return {
+    year: document.getElementById("filterYear").value,
+    status: document.getElementById("filterStatus").value,
+    fundingType: document.getElementById("filterFundingType").value,
+    departmentId: document.getElementById("filterDepartment").value,
+    collegeId: document.getElementById("filterCollege").value
+  };
+}
+
+async function loadFilterOptions() {
+  APP_CONFIG.statusOptions.forEach(s =>
+    document.getElementById("filterStatus").insertAdjacentHTML("beforeend", `<option value="${s}">${s}</option>`));
+  APP_CONFIG.fundingTypes.forEach(f =>
+    document.getElementById("filterFundingType").insertAdjacentHTML("beforeend", `<option value="${f}">${f}</option>`));
+
+  const departments = await DataService.listDepartments();
+  departments.forEach(d =>
+    document.getElementById("filterDepartment").insertAdjacentHTML("beforeend", `<option value="${d.id}">${Utils.escapeHtml(d.name)}</option>`));
+
+  const colleges = await DataService.listColleges();
+  colleges.forEach(c =>
+    document.getElementById("filterCollege").insertAdjacentHTML("beforeend", `<option value="${c.id}">${Utils.escapeHtml(c.name)}</option>`));
+
+  const currentYear = new Date().getFullYear();
+  const yearSel = document.getElementById("filterYear");
+  for (let y = currentYear + 1; y >= currentYear - 9; y--) {
+    yearSel.insertAdjacentHTML("beforeend", `<option value="${y}">${y}</option>`);
+  }
+}
+
+const FILTER_IDS = ["filterYear", "filterStatus", "filterFundingType", "filterDepartment", "filterCollege"];
+
+function renderChips() {
+  const container = document.getElementById("filterChips");
+  const chips = FILTER_IDS
+    .map(id => {
+      const sel = document.getElementById(id);
+      return sel.value ? { id, label: sel.options[sel.selectedIndex].text } : null;
+    })
+    .filter(Boolean);
+
+  if (chips.length === 0) { container.classList.add("d-none"); container.innerHTML = ""; return; }
+  container.classList.remove("d-none");
+  container.innerHTML =
+    chips.map(c => `<span class="uhs-chip">${Utils.escapeHtml(c.label)}<button data-ctrl="${c.id}" title="Remove"><i class="bi bi-x-lg"></i></button></span>`).join("") +
+    `<button class="uhs-chip-clear-all" id="chipClearAll">Clear all</button>`;
+
+  container.querySelectorAll(".uhs-chip button[data-ctrl]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById(btn.dataset.ctrl).value = "";
+      loadReport();
+    });
+  });
+  document.getElementById("chipClearAll").addEventListener("click", () => {
+    FILTER_IDS.forEach(id => document.getElementById(id).value = "");
+    loadReport();
+  });
+}
+
+async function loadReport() {
+  const tbody = document.getElementById("reportBody");
+  tbody.innerHTML = Utils.skeletonRows(10);
+  renderChips();
+  try {
+    const filters = currentFilters();
+    const projects = await DataService.listProjects(filters);
+    lastResults = projects;
+
+    const totalCost = projects.reduce((sum, p) => sum + Number(p.project_cost || 0), 0);
+    document.getElementById("reportSummary").textContent =
+      `${projects.length} project(s) — Total cost: ${Utils.formatCurrency(totalCost)}`;
+
+    if (projects.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="10"><div class="uhs-empty-state"><i class="bi bi-file-earmark-bar-graph"></i>No projects match this report criteria.</div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = projects.map(p => `
+      <tr>
+        <td class="fw-semibold">${Utils.escapeHtml(p.title)}</td>
+        <td>${Utils.escapeHtml(p.principal_investigator)}</td>
+        <td>${Utils.escapeHtml(p.department_name || "—")}</td>
+        <td>${Utils.escapeHtml(p.college_name || "—")}</td>
+        <td>${Utils.escapeHtml(p.funding_agency_name || "—")}</td>
+        <td>${Utils.escapeHtml(p.funding_type)}</td>
+        <td>${Utils.formatCurrency(p.project_cost)}</td>
+        <td>${Utils.formatDate(p.start_date)}</td>
+        <td>${Utils.formatDate(p.end_date)}</td>
+        <td>${Utils.statusBadge(p.status)}</td>
+      </tr>
+    `).join("");
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">${err.message}</td></tr>`;
+  }
+}
+
+function exportPdf() {
+  if (lastResults.length === 0) { Utils.toast("No data to export.", "warning"); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape" });
+
+  doc.setFontSize(14);
+  doc.setTextColor(46, 125, 50);
+  doc.text("UHS-PIMS — Project Report", 14, 15);
+  doc.setFontSize(9);
+  doc.setTextColor(100);
+  doc.text(`Generated: ${new Date().toLocaleString("en-IN")} | Total Records: ${lastResults.length}`, 14, 21);
+
+  const rows = lastResults.map(p => [
+    p.title, p.principal_investigator, p.department_name || "—", p.college_name || "—",
+    p.funding_agency_name || "—", p.funding_type, Utils.formatCurrency(p.project_cost),
+    Utils.formatDate(p.start_date), Utils.formatDate(p.end_date), p.status
+  ]);
+
+  doc.autoTable({
+    startY: 26,
+    head: [["Title", "PI", "Department", "College", "Agency", "Funding Type", "Cost", "Start", "End", "Status"]],
+    body: rows,
+    styles: { fontSize: 7, cellPadding: 2 },
+    headStyles: { fillColor: [46, 125, 50] },
+    alternateRowStyles: { fillColor: [248, 249, 250] }
+  });
+
+  doc.save(`UHS-PIMS-Report-${Date.now()}.pdf`);
+}
+
+function exportExcel() {
+  if (lastResults.length === 0) { Utils.toast("No data to export.", "warning"); return; }
+  const rows = lastResults.map(p => ({
+    "Title": p.title,
+    "Principal Investigator": p.principal_investigator,
+    "Co-PI": p.co_principal_investigator || "",
+    "Department": p.department_name || "",
+    "College": p.college_name || "",
+    "Funding Agency": p.funding_agency_name || "",
+    "Funding Type": p.funding_type,
+    "Project Cost": p.project_cost,
+    "Start Date": p.start_date || "",
+    "End Date": p.end_date || "",
+    "Duration (months)": p.duration_months || "",
+    "Status": p.status,
+    "Remarks": p.remarks || ""
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Projects");
+  XLSX.writeFile(wb, `UHS-PIMS-Report-${Date.now()}.xlsx`);
+}
+
+(async () => {
+  const session = await Auth.requireAuth();
+  if (!session) return;
+  renderSidebar("reports");
+  renderTopbar("Reports");
+  renderFooter();
+
+  await loadFilterOptions();
+  await loadReport();
+
+  ["filterYear", "filterStatus", "filterFundingType", "filterDepartment", "filterCollege"].forEach(id =>
+    document.getElementById(id).addEventListener("change", loadReport));
+
+  document.getElementById("exportPdfBtn").addEventListener("click", exportPdf);
+  document.getElementById("exportExcelBtn").addEventListener("click", exportExcel);
+})();
+</script>
+</body>
+</html>

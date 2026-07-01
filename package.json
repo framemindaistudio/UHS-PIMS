@@ -1,0 +1,12 @@
+{
+  "name": "uhs-pims",
+  "version": "1.0.0",
+  "description": "UHS Project Information Management System — University of Horticultural Sciences",
+  "private": true,
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
