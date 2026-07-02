@@ -376,7 +376,8 @@ async function handleImportFile(file) {
     importCaches = {
       colleges: await DataService.listColleges(),
       departments: await DataService.listDepartments(),
-      agencies: await DataService.listFundingAgencies()
+      agencies: await DataService.listFundingAgencies(),
+      existingTitles: await DataService.listProjectTitles()
     };
   }
 
@@ -387,6 +388,7 @@ async function handleImportFile(file) {
 
   const errors = [];
   const valid = [];
+  const seenInFile = new Set();
   raw.forEach((row, i) => {
     const rowNum = i + 2; // header is row 1
     const get = (k) => (row[k] !== undefined ? String(row[k]).trim() : "");
@@ -401,6 +403,11 @@ async function handleImportFile(file) {
     if (fundingType && !APP_CONFIG.fundingTypes.includes(fundingType)) rowErrs.push(`invalid Funding Type "${fundingType}"`);
     if (!fundingType) rowErrs.push("missing Funding Type");
     if (!APP_CONFIG.statusOptions.includes(status)) rowErrs.push(`invalid Status "${status}"`);
+
+    const titleKey = title.toLowerCase();
+    if (title && importCaches.existingTitles.has(titleKey)) rowErrs.push("a project with this title already exists");
+    else if (title && seenInFile.has(titleKey)) rowErrs.push("duplicate title within this file");
+    if (title) seenInFile.add(titleKey);
 
     const college = get("College") ? findByName(importCaches.colleges, get("College")) : null;
     if (get("College") && !college) rowErrs.push(`College "${get("College")}" not found`);

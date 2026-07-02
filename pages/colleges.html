@@ -147,7 +147,7 @@ async function loadColleges() {
       </tr>
     `).join("");
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">${Utils.escapeHtml(err.message)}</td></tr>`;
   }
 }
 
