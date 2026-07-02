@@ -115,7 +115,22 @@ uhs-pims/
 - `project_cost` is stored as a plain numeric column — for INR formatting at scale you may want to add currency config if other currencies are needed later.
 
 ### Upgrading an existing database
-If your Supabase project was set up before the **designation** field and **role-based access** were added, run `database/migration-v2-designation-roles.sql` once in the SQL Editor. A brand-new install using the latest `schema.sql` already includes both.
+Run these once in the SQL Editor if your project predates them (a fresh `schema.sql` already includes all of it):
+- `database/migration-v2-designation-roles.sql` — designation field + admin/viewer roles
+- `database/migration-v3-user-admin-read.sql` — lets admins list users on the in-app Users page
+
+### In-app user creation (Users page)
+Admins can create read-only viewer accounts directly from the **Users** page — no need to open Supabase each time. This is powered by a Supabase **Edge Function** (`supabase/functions/create-user`) that runs server-side with the service_role key and only allows admins to call it (the service_role key is never exposed to the browser).
+
+**Deploy the function once** (needs the [Supabase CLI](https://supabase.com/docs/guides/cli) and your login):
+```bash
+supabase login
+supabase link --project-ref mffuhbgpjcjrhfgxpunu
+supabase functions deploy create-user
+```
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically — no secrets to set.
+
+Also make sure new accounts can log in immediately: **Authentication → Providers → Email → turn off "Confirm email"** (these are office-created accounts with a known password). To promote a viewer to admin, run `update admin_users set role='admin' where email='...';`. Deleting an account is done from the Supabase dashboard.
 
 ## 6. Handover Checklist
 

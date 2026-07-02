@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Users — UHS-PIMS</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="../assets/css/style.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="uhs-app">
+  <div id="uhs-sidebar-mount"></div>
+
+  <div class="uhs-main">
+    <div id="uhs-topbar-mount"></div>
+
+    <div class="uhs-content">
+      <div class="mb-4">
+        <h5 class="fw-bold mb-0">Users</h5>
+        <p class="text-muted small mb-0">Create read-only viewer accounts and see who has access.</p>
+      </div>
+
+      <div class="row g-4">
+        <!-- Add viewer -->
+        <div class="col-lg-5">
+          <div class="uhs-card p-4">
+            <div class="uhs-form-section-head mb-3">
+              <span class="sec-icon"><i class="bi bi-person-plus"></i></span>
+              <div><h6>Add a viewer</h6><div class="sec-sub">Read-only access — can view, not edit</div></div>
+            </div>
+            <form id="userForm">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Full name</label>
+                <input type="text" class="form-control" id="uName" placeholder="e.g. Ramesh Kumar">
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Email *</label>
+                <input type="email" class="form-control" id="uEmail" required placeholder="viewer@uhsbagalkot.edu.in">
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Temporary password *</label>
+                <input type="text" class="form-control" id="uPassword" required minlength="6" placeholder="At least 6 characters">
+                <div class="form-text">Share this with the viewer; they can change it later from their Profile.</div>
+              </div>
+              <button type="submit" class="btn btn-uhs-primary w-100" id="createUserBtn">
+                <i class="bi bi-person-plus"></i> Create viewer account
+              </button>
+            </form>
+            <div class="alert alert-info small mt-3 mb-0 d-flex gap-2">
+              <i class="bi bi-info-circle"></i>
+              <div>To make someone an <b>administrator</b>, create them here first, then promote in Supabase (see the guide). Removing an account is done from the Supabase dashboard.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- User list -->
+        <div class="col-lg-7">
+          <div class="uhs-card p-4">
+            <h6 class="fw-bold mb-3">People with access</h6>
+            <div class="table-responsive">
+              <table class="table table-uhs align-middle mb-0">
+                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Added</th></tr></thead>
+                <tbody id="usersBody">
+                  <tr><td colspan="4" class="text-center text-muted py-4">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="uhs-footer-mount"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../config/supabase.js"></script>
+<script src="../config/config.js"></script>
+<script src="../components/auth.js"></script>
+<script src="../components/sidebar.js"></script>
+<script src="../components/navbar.js"></script>
+<script src="../components/footer.js"></script>
+<script src="../assets/js/utils.js"></script>
+<script src="../assets/js/data.js"></script>
+<script src="../components/onboarding.js"></script>
+<script>
+function roleBadge(role) {
+  return role === "admin"
+    ? `<span class="badge-status badge-completed">Administrator</span>`
+    : `<span class="badge-status badge-proposed">Viewer</span>`;
+}
+
+async function loadUsers() {
+  const tbody = document.getElementById("usersBody");
+  tbody.innerHTML = Utils.skeletonRows(4);
+  try {
+    const users = await DataService.listUsers();
+    if (users.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No users yet.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td class="fw-semibold">${Utils.escapeHtml(u.full_name && !u.full_name.includes("@") ? u.full_name : "—")}</td>
+        <td>${Utils.escapeHtml(u.email || "—")}</td>
+        <td>${roleBadge(u.role)}</td>
+        <td>${Utils.formatDate(u.created_at)}</td>
+      </tr>
+    `).join("");
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">${Utils.escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+document.getElementById("userForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById("createUserBtn");
+  const email = document.getElementById("uEmail").value.trim();
+  const password = document.getElementById("uPassword").value;
+  const full_name = document.getElementById("uName").value.trim();
+
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Creating...`;
+  try {
+    await DataService.createViewerUser({ email, password, full_name });
+    Utils.toast(`Viewer account created for ${email}.`);
+    document.getElementById("userForm").reset();
+    loadUsers();
+  } catch (err) {
+    Utils.toast("Could not create user: " + err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<i class="bi bi-person-plus"></i> Create viewer account`;
+  }
+});
+
+(async () => {
+  const session = await Auth.requireAuth();
+  if (!session) return;
+  renderSidebar("users");
+  renderTopbar("Users");
+  renderFooter();
+
+  // Admins only — send viewers back to the dashboard.
+  if (!(await Auth.isAdmin())) {
+    Utils.toast("This page is for administrators only.", "warning");
+    setTimeout(() => window.location.href = "dashboard.html", 900);
+    return;
+  }
+
+  await loadUsers();
+})();
+</script>
+</body>
+</html>

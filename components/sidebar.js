@@ -10,6 +10,7 @@ const SIDEBAR_LINKS = [
   { key: "colleges",   label: "Colleges",          icon: "bi-bank2",         href: "colleges.html" },
   { key: "funding",    label: "Funding Agencies",  icon: "bi-cash-coin",     href: "funding.html" },
   { key: "reports",    label: "Reports",           icon: "bi-file-earmark-bar-graph", href: "reports.html" },
+  { key: "users",      label: "Users",             icon: "bi-people",        href: "users.html", adminOnly: true },
   { key: "profile",    label: "Profile",           icon: "bi-person-circle", href: "profile.html" },
 ];
 
@@ -18,7 +19,7 @@ function renderSidebar(activeKey) {
   if (!mount) return;
 
   const links = SIDEBAR_LINKS.map(link => `
-    <a href="${link.href}" class="uhs-nav-link ${link.key === activeKey ? "active" : ""}">
+    <a href="${link.href}" class="uhs-nav-link ${link.key === activeKey ? "active" : ""} ${link.adminOnly ? "admin-only" : ""}">
       <i class="bi ${link.icon}"></i>
       <span>${link.label}</span>
     </a>

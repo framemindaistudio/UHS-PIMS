@@ -148,8 +148,9 @@ create policy "Admin write projects" on projects for insert with check (public.i
 create policy "Admin update projects" on projects for update using (public.is_admin());
 create policy "Admin delete projects" on projects for delete using (public.is_admin());
 
--- Admin users (self read only)
+-- Admin users: users read their own row; admins can read everyone (for the Users page).
 create policy "Self read admin_users" on admin_users for select using (auth.uid() = id);
+create policy "Admin read all admin_users" on admin_users for select using (public.is_admin());
 create policy "Self update admin_users" on admin_users for update using (auth.uid() = id);
 
 -- ============================================================

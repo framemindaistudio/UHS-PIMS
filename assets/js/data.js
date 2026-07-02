@@ -114,6 +114,27 @@ const DataService = {
     if (error) throw error;
   },
 
+  // ---------------- Users (admin only) ----------------
+  async listUsers() {
+    const { data, error } = await supabaseClient
+      .from("admin_users").select("*").order("created_at");
+    if (error) throw error;
+    return data;
+  },
+  async createViewerUser({ email, password, full_name }) {
+    const { data, error } = await supabaseClient.functions.invoke("create-user", {
+      body: { email, password, full_name }
+    });
+    // Network/non-2xx errors surface here; try to read the function's message.
+    if (error) {
+      let msg = error.message || "Failed to create user.";
+      try { const body = await error.context?.json?.(); if (body?.error) msg = body.error; } catch (_) {}
+      throw new Error(msg);
+    }
+    if (data && data.ok === false) throw new Error(data.error || "Failed to create user.");
+    return data;
+  },
+
   // ---------------- Dashboard Stats ----------------
   async getDashboardStats() {
     const { data, error } = await supabaseClient.from("projects_view").select("*");
