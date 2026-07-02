@@ -64,8 +64,20 @@ const DataService = {
   },
 
   // ---------------- Projects ----------------
-  async listProjects(filters = {}) {
-    let query = supabaseClient.from("projects_view").select("*").order("created_at", { ascending: false });
+  // Sortable columns exposed to the UI (whitelist — prevents arbitrary order-by).
+  PROJECT_SORT_COLUMNS: ["title", "principal_investigator", "designation", "department_name",
+    "college_name", "funding_agency_name", "funding_type", "project_cost", "start_date", "end_date", "status", "created_at"],
+
+  /**
+   * List projects with optional filters, sorting and pagination.
+   * @returns { data, count } — count is the total matching rows (for pagination).
+   * Omit opts.page/pageSize to fetch everything (used by exports).
+   */
+  async listProjects(filters = {}, opts = {}) {
+    const sortBy = this.PROJECT_SORT_COLUMNS.includes(opts.sortBy) ? opts.sortBy : "created_at";
+    const ascending = opts.sortDir === "asc";
+    let query = supabaseClient.from("projects_view").select("*", { count: "exact" })
+      .order(sortBy, { ascending, nullsFirst: false });
 
     if (filters.search) {
       const s = filters.search.replace(/[%,]/g, "");
@@ -88,9 +100,21 @@ const DataService = {
       if (max !== null && max !== undefined) query = query.lte("duration_months", max);
     }
 
-    const { data, error } = await query;
+    if (opts.page && opts.pageSize) {
+      const from = (opts.page - 1) * opts.pageSize;
+      query = query.range(from, from + opts.pageSize - 1);
+    }
+
+    const { data, error, count } = await query;
     if (error) throw error;
-    return data;
+    return { data: data || [], count: count ?? (data ? data.length : 0) };
+  },
+
+  // Returns just the titles (lowercased) of all projects — used for import duplicate checks.
+  async listProjectTitles() {
+    const { data, error } = await supabaseClient.from("projects").select("title");
+    if (error) throw error;
+    return new Set((data || []).map(p => (p.title || "").trim().toLowerCase()));
   },
   async getProject(id) {
     const { data, error } = await supabaseClient.from("projects_view").select("*").eq("id", id).single();

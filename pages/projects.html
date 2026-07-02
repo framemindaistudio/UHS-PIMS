@@ -71,13 +71,13 @@
         <div class="table-responsive">
           <table class="table table-uhs align-middle mb-0">
             <thead>
-              <tr>
-                <th>Title</th>
-                <th>Principal Investigator</th>
-                <th>Department</th>
-                <th>Funding Type</th>
-                <th>Cost</th>
-                <th>Status</th>
+              <tr id="projectsHead">
+                <th class="uhs-sortable" data-col="title">Title</th>
+                <th class="uhs-sortable" data-col="principal_investigator">Principal Investigator</th>
+                <th class="uhs-sortable" data-col="department_name">Department</th>
+                <th class="uhs-sortable" data-col="funding_type">Funding Type</th>
+                <th class="uhs-sortable" data-col="project_cost">Cost</th>
+                <th class="uhs-sortable" data-col="status">Status</th>
                 <th class="text-end admin-only">Actions</th>
               </tr>
             </thead>
@@ -86,7 +86,10 @@
             </tbody>
           </table>
         </div>
-        <div id="resultCount" class="text-muted small mt-2"></div>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+          <div id="resultCount" class="text-muted small"></div>
+          <div class="uhs-pager" id="pager"></div>
+        </div>
       </div>
 
     </div>
@@ -162,6 +165,12 @@
 let deleteTargetId = null;
 let departmentsCache = [];
 
+// Pagination + sort state
+let curPage = 1;
+const PAGE_SIZE = 15;
+let sortBy = "created_at";
+let sortDir = "desc";
+
 async function loadFilterOptions() {
   const statusSel = document.getElementById("filterStatus");
   APP_CONFIG.statusOptions.forEach(s => {
@@ -214,7 +223,7 @@ function renderChips() {
   container.querySelectorAll(".uhs-chip button[data-ctrl]").forEach(btn => {
     btn.addEventListener("click", () => {
       document.getElementById(btn.dataset.ctrl).value = "";
-      loadProjects();
+      applyFilters();
     });
   });
   document.getElementById("chipClearAll").addEventListener("click", () => {
@@ -222,18 +231,51 @@ function renderChips() {
   });
 }
 
+function applyFilters() { curPage = 1; loadProjects(); }
+
+function updateSortIndicators() {
+  document.querySelectorAll("#projectsHead .uhs-sortable").forEach(th => {
+    th.classList.remove("sort-asc", "sort-desc");
+    if (th.dataset.col === sortBy) th.classList.add(sortDir === "asc" ? "sort-asc" : "sort-desc");
+  });
+}
+
+function renderPager(total) {
+  const pager = document.getElementById("pager");
+  const pages = Math.ceil(total / PAGE_SIZE);
+  if (pages <= 1) { pager.innerHTML = ""; return; }
+  const btn = (label, page, disabled, active) =>
+    `<button class="uhs-page-btn ${active ? "active" : ""}" ${disabled ? "disabled" : ""} data-page="${page}">${label}</button>`;
+  let html = btn("‹", curPage - 1, curPage === 1, false);
+  const win = [];
+  for (let p = 1; p <= pages; p++) {
+    if (p === 1 || p === pages || Math.abs(p - curPage) <= 1) win.push(p);
+    else if (win[win.length - 1] !== "…") win.push("…");
+  }
+  win.forEach(p => html += p === "…" ? `<span class="uhs-page-ellipsis">…</span>` : btn(p, p, false, p === curPage));
+  html += btn("›", curPage + 1, curPage === pages, false);
+  pager.innerHTML = html;
+  pager.querySelectorAll(".uhs-page-btn[data-page]").forEach(b =>
+    b.addEventListener("click", () => { curPage = Number(b.dataset.page); loadProjects(); }));
+}
+
 async function loadProjects() {
   const tbody = document.getElementById("projectsBody");
   tbody.innerHTML = Utils.skeletonRows(7);
   renderChips();
+  updateSortIndicators();
   try {
     const filters = currentFilters();
-    const projects = await DataService.listProjects(filters);
+    const { data: projects, count } = await DataService.listProjects(filters, { page: curPage, pageSize: PAGE_SIZE, sortBy, sortDir });
 
-    document.getElementById("resultCount").textContent = `${projects.length} project(s) found`;
+    const from = count === 0 ? 0 : (curPage - 1) * PAGE_SIZE + 1;
+    const to = Math.min(curPage * PAGE_SIZE, count);
+    document.getElementById("resultCount").textContent =
+      count === 0 ? "0 projects found" : `Showing ${from}–${to} of ${count} project(s)`;
 
     if (projects.length === 0) {
       tbody.innerHTML = `<tr><td colspan="7"><div class="uhs-empty-state"><i class="bi bi-flower3"></i>No projects match your search/filters.</div></td></tr>`;
+      renderPager(count);
       return;
     }
 
@@ -251,9 +293,10 @@ async function loadProjects() {
         </td>
       </tr>
     `).join("");
+    renderPager(count);
   } catch (err) {
     console.error(err);
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Failed to load projects: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Failed to load projects: ${Utils.escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -459,16 +502,26 @@ async function runImport() {
   });
   document.getElementById("confirmImportBtn").addEventListener("click", runImport);
 
-  document.getElementById("searchInput").addEventListener("input", Utils.debounce(loadProjects, 350));
-  document.getElementById("filterStatus").addEventListener("change", loadProjects);
-  document.getElementById("filterFundingType").addEventListener("change", loadProjects);
-  document.getElementById("filterDepartment").addEventListener("change", loadProjects);
+  document.getElementById("searchInput").addEventListener("input", Utils.debounce(applyFilters, 350));
+  document.getElementById("filterStatus").addEventListener("change", applyFilters);
+  document.getElementById("filterFundingType").addEventListener("change", applyFilters);
+  document.getElementById("filterDepartment").addEventListener("change", applyFilters);
   document.getElementById("clearFiltersBtn").addEventListener("click", () => {
     document.getElementById("searchInput").value = "";
     document.getElementById("filterStatus").value = "";
     document.getElementById("filterFundingType").value = "";
     document.getElementById("filterDepartment").value = "";
-    loadProjects();
+    applyFilters();
+  });
+
+  // Click-to-sort column headers
+  document.getElementById("projectsHead").addEventListener("click", (e) => {
+    const th = e.target.closest(".uhs-sortable");
+    if (!th) return;
+    const col = th.dataset.col;
+    if (sortBy === col) sortDir = sortDir === "asc" ? "desc" : "asc";
+    else { sortBy = col; sortDir = "asc"; }
+    applyFilters();
   });
 })();
 </script>

@@ -73,27 +73,30 @@
 
       <!-- Table -->
       <div class="uhs-card p-3">
-        <div class="table-responsive">
+        <div class="table-responsive" id="reportTableWrap">
           <table class="table table-uhs align-middle mb-0" id="reportTable">
             <thead>
-              <tr>
-                <th>Title</th>
-                <th>PI</th>
-                <th>Designation</th>
-                <th>Department</th>
-                <th>College</th>
-                <th>Funding Agency</th>
-                <th>Funding Type</th>
-                <th>Cost (₹)</th>
-                <th>Start</th>
-                <th>End</th>
-                <th>Status</th>
+              <tr id="reportHead">
+                <th class="uhs-sortable" data-col="title">Title</th>
+                <th class="uhs-sortable" data-col="principal_investigator">PI</th>
+                <th class="uhs-sortable" data-col="designation">Designation</th>
+                <th class="uhs-sortable" data-col="department_name">Department</th>
+                <th class="uhs-sortable" data-col="college_name">College</th>
+                <th class="uhs-sortable" data-col="funding_agency_name">Funding Agency</th>
+                <th class="uhs-sortable" data-col="funding_type">Funding Type</th>
+                <th class="uhs-sortable" data-col="project_cost">Cost (₹)</th>
+                <th class="uhs-sortable" data-col="start_date">Start</th>
+                <th class="uhs-sortable" data-col="end_date">End</th>
+                <th class="uhs-sortable" data-col="status">Status</th>
               </tr>
             </thead>
             <tbody id="reportBody">
               <tr><td colspan="11" class="text-center text-muted py-4">Loading...</td></tr>
             </tbody>
           </table>
+        </div>
+        <div class="d-flex justify-content-end mt-3">
+          <div class="uhs-pager" id="reportPager"></div>
         </div>
       </div>
 
@@ -118,7 +121,11 @@
 <script src="../assets/js/data.js"></script>
 <script src="../components/onboarding.js"></script>
 <script>
-let lastResults = [];
+let lastResults = [];   // full filtered set, kept for export
+let curPage = 1;
+const PAGE_SIZE = 20;
+let sortBy = "created_at";
+let sortDir = "desc";
 
 function currentFilters() {
   return {
@@ -179,13 +186,68 @@ function renderChips() {
   container.querySelectorAll(".uhs-chip button[data-ctrl]").forEach(btn => {
     btn.addEventListener("click", () => {
       document.getElementById(btn.dataset.ctrl).value = "";
-      loadReport();
+      applyReport();
     });
   });
   document.getElementById("chipClearAll").addEventListener("click", () => {
     FILTER_IDS.forEach(id => document.getElementById(id).value = "");
-    loadReport();
+    applyReport();
   });
+}
+
+function applyReport() { curPage = 1; loadReport(); }
+
+function updateSortIndicators() {
+  document.querySelectorAll("#reportHead .uhs-sortable").forEach(th => {
+    th.classList.remove("sort-asc", "sort-desc");
+    if (th.dataset.col === sortBy) th.classList.add(sortDir === "asc" ? "sort-asc" : "sort-desc");
+  });
+}
+
+function renderReportPager() {
+  const pager = document.getElementById("reportPager");
+  const pages = Math.ceil(lastResults.length / PAGE_SIZE);
+  if (pages <= 1) { pager.innerHTML = ""; return; }
+  const btn = (label, page, disabled, active) =>
+    `<button class="uhs-page-btn ${active ? "active" : ""}" ${disabled ? "disabled" : ""} data-page="${page}">${label}</button>`;
+  let html = btn("‹", curPage - 1, curPage === 1, false);
+  const win = [];
+  for (let p = 1; p <= pages; p++) {
+    if (p === 1 || p === pages || Math.abs(p - curPage) <= 1) win.push(p);
+    else if (win[win.length - 1] !== "…") win.push("…");
+  }
+  win.forEach(p => html += p === "…" ? `<span class="uhs-page-ellipsis">…</span>` : btn(p, p, false, p === curPage));
+  html += btn("›", curPage + 1, curPage === pages, false);
+  pager.innerHTML = html;
+  pager.querySelectorAll(".uhs-page-btn[data-page]").forEach(b =>
+    b.addEventListener("click", () => { curPage = Number(b.dataset.page); renderReportPage(); }));
+}
+
+function renderReportPage() {
+  const tbody = document.getElementById("reportBody");
+  updateSortIndicators();
+  if (lastResults.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="11"><div class="uhs-empty-state"><i class="bi bi-file-earmark-bar-graph"></i>No projects match this report criteria.</div></td></tr>`;
+    renderReportPager();
+    return;
+  }
+  const slice = lastResults.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE);
+  tbody.innerHTML = slice.map(p => `
+    <tr>
+      <td class="fw-semibold">${Utils.escapeHtml(p.title)}</td>
+      <td>${Utils.escapeHtml(p.principal_investigator)}</td>
+      <td>${Utils.escapeHtml(p.designation || "—")}</td>
+      <td>${Utils.escapeHtml(p.department_name || "—")}</td>
+      <td>${Utils.escapeHtml(p.college_name || "—")}</td>
+      <td>${Utils.escapeHtml(p.funding_agency_name || "—")}</td>
+      <td>${Utils.escapeHtml(p.funding_type)}</td>
+      <td>${Utils.formatCurrency(p.project_cost)}</td>
+      <td>${Utils.formatDate(p.start_date)}</td>
+      <td>${Utils.formatDate(p.end_date)}</td>
+      <td>${Utils.statusBadge(p.status)}</td>
+    </tr>
+  `).join("");
+  renderReportPager();
 }
 
 async function loadReport() {
@@ -194,35 +256,17 @@ async function loadReport() {
   renderChips();
   try {
     const filters = currentFilters();
-    const projects = await DataService.listProjects(filters);
-    lastResults = projects;
+    // Fetch the full filtered+sorted set once (used for display, summary and export).
+    const { data } = await DataService.listProjects(filters, { sortBy, sortDir });
+    lastResults = data;
 
-    const totalCost = projects.reduce((sum, p) => sum + Number(p.project_cost || 0), 0);
+    const totalCost = data.reduce((sum, p) => sum + Number(p.project_cost || 0), 0);
     document.getElementById("reportSummary").textContent =
-      `${projects.length} project(s) — Total cost: ${Utils.formatCurrency(totalCost)}`;
+      `${data.length} project(s) — Total cost: ${Utils.formatCurrency(totalCost)}`;
 
-    if (projects.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="11"><div class="uhs-empty-state"><i class="bi bi-file-earmark-bar-graph"></i>No projects match this report criteria.</div></td></tr>`;
-      return;
-    }
-
-    tbody.innerHTML = projects.map(p => `
-      <tr>
-        <td class="fw-semibold">${Utils.escapeHtml(p.title)}</td>
-        <td>${Utils.escapeHtml(p.principal_investigator)}</td>
-        <td>${Utils.escapeHtml(p.designation || "—")}</td>
-        <td>${Utils.escapeHtml(p.department_name || "—")}</td>
-        <td>${Utils.escapeHtml(p.college_name || "—")}</td>
-        <td>${Utils.escapeHtml(p.funding_agency_name || "—")}</td>
-        <td>${Utils.escapeHtml(p.funding_type)}</td>
-        <td>${Utils.formatCurrency(p.project_cost)}</td>
-        <td>${Utils.formatDate(p.start_date)}</td>
-        <td>${Utils.formatDate(p.end_date)}</td>
-        <td>${Utils.statusBadge(p.status)}</td>
-      </tr>
-    `).join("");
+    renderReportPage();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="11" class="text-center text-danger py-4">${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="text-center text-danger py-4">${Utils.escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -296,8 +340,17 @@ function exportExcel() {
   await loadFilterOptions();
   await loadReport();
 
-  ["filterYear", "filterStatus", "filterFundingType", "filterDepartment", "filterCollege"].forEach(id =>
-    document.getElementById(id).addEventListener("change", loadReport));
+  FILTER_IDS.forEach(id =>
+    document.getElementById(id).addEventListener("change", applyReport));
+
+  document.getElementById("reportHead").addEventListener("click", (e) => {
+    const th = e.target.closest(".uhs-sortable");
+    if (!th) return;
+    const col = th.dataset.col;
+    if (sortBy === col) sortDir = sortDir === "asc" ? "desc" : "asc";
+    else { sortBy = col; sortDir = "asc"; }
+    applyReport();
+  });
 
   document.getElementById("exportPdfBtn").addEventListener("click", exportPdf);
   document.getElementById("exportExcelBtn").addEventListener("click", exportExcel);
