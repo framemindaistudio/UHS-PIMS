@@ -122,13 +122,14 @@ Run these once in the SQL Editor if your project predates them (a fresh `schema.
 ### In-app user creation (Users page)
 Admins can create read-only viewer accounts directly from the **Users** page — no need to open Supabase each time. This is powered by a Supabase **Edge Function** (`supabase/functions/create-user`) that runs server-side with the service_role key and only allows admins to call it (the service_role key is never exposed to the browser).
 
-**Deploy the function once** (needs the [Supabase CLI](https://supabase.com/docs/guides/cli) and your login):
+**Deploy the function once** (uses `npx`, no CLI install needed — run from the project root):
 ```bash
-supabase login
-supabase link --project-ref mffuhbgpjcjrhfgxpunu
-supabase functions deploy create-user
+npx supabase login
+npx supabase functions deploy create-user --project-ref mffuhbgpjcjrhfgxpunu --no-verify-jwt
 ```
 `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically — no secrets to set.
+
+`--no-verify-jwt` is required so the browser's CORS preflight isn't rejected by the platform; the function still authenticates the caller and checks they're an admin internally, so access stays locked down. (Or deploy via the Supabase Dashboard → Edge Functions editor and turn **off** "Verify JWT" there.)
 
 Also make sure new accounts can log in immediately: **Authentication → Providers → Email → turn off "Confirm email"** (these are office-created accounts with a known password). To promote a viewer to admin, run `update admin_users set role='admin' where email='...';`. Deleting an account is done from the Supabase dashboard.
 
