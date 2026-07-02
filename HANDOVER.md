@@ -34,17 +34,22 @@ Write actions are hidden for viewers in the screen **and** blocked in the databa
 
 ## 4. Managing users (administrator task)
 
-There is no public sign-up (by design, for security). To add a person:
+There is no public sign-up (by design, for security).
 
-1. Open the **Supabase dashboard** → your project → **Authentication → Users → Add user**
-2. Enter their email + a password, tick **Auto Confirm User**, click **Create user**
-3. They can now log in as a **read-only viewer** immediately.
+**Add a read-only viewer — from inside the app (easiest):**
+1. Log in as an administrator → click **Users** in the sidebar
+2. Under **Add a viewer**, enter their name, email and a temporary password → **Create viewer account**
+3. Hand them the credentials — they can log in straight away and view everything (but not edit). They can change their password later from **Profile**.
 
-**To make someone an administrator**, open Supabase → **SQL Editor** and run (replace the email):
+> Only administrators see the Users page and can create accounts.
+
+**To make someone an administrator**, create them as a viewer first (above), then open Supabase → **SQL Editor** and run (replace the email):
 
 ```sql
 update admin_users set role = 'admin' where email = 'person@uhsbagalkot.edu.in';
 ```
+
+**To remove someone's access**, delete their account in Supabase → **Authentication → Users**.
 
 To change your own password once logged in: **Profile → Change Password**.
 
