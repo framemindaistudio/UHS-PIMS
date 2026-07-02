@@ -5,6 +5,13 @@ const APP_CONFIG = {
   appName: "UHS-PIMS",
   fullName: "UHS Project Information Management System",
   university: "University of Horticultural Sciences",
+  // Branding — drop the university logo in later without touching code.
+  // Set logoUrl to an image path/URL (e.g. "../assets/images/logo.png") and it
+  // will replace the default flower mark in the sidebar and login screen.
+  branding: {
+    logoUrl: null,
+    footerName: "University of Horticultural Sciences"
+  },
   fundingTypes: ["University Funded", "External Funded"],
   statusOptions: ["Ongoing", "Completed", "Proposed", "Terminated"],
   designationOptions: [

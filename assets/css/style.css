@@ -17,10 +17,12 @@
   --uhs-gold-100:  #FDF3DC;
   --uhs-gold-400:  #E8B34D;
   --uhs-gold-600:  #C8912C;
+  --uhs-gold-700:  #8A5D0F;   /* accessible on gold-100 (badge text) */
 
   --uhs-sky-100:   #E5F4FB;
   --uhs-sky-400:   #4FB6E8;
   --uhs-sky-600:   #1D77A6;
+  --uhs-sky-700:   #145C82;   /* accessible on sky-100 (badge text) */
 
   --uhs-soil-100:  #F1E8DF;
   --uhs-soil-400:  #A9793F;
@@ -288,8 +290,8 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
   letter-spacing: .01em;
 }
 .badge-ongoing    { background: var(--uhs-green-100);       color: var(--uhs-green-700); }
-.badge-completed  { background: var(--uhs-gold-100);        color: var(--uhs-gold-600); }
-.badge-proposed   { background: var(--uhs-sky-100);         color: var(--uhs-sky-600); }
+.badge-completed  { background: var(--uhs-gold-100);        color: var(--uhs-gold-700); }
+.badge-proposed   { background: var(--uhs-sky-100);         color: var(--uhs-sky-700); }
 .badge-terminated { background: var(--uhs-rust-100);        color: var(--uhs-rust-600); }
 
 /* ---------- Tables ---------- */
@@ -439,6 +441,19 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
   box-shadow: 0 10px 22px rgba(46,139,69,0.3);
 }
 
+/* Custom-logo variant: show the image cleanly instead of the gradient mark */
+.logo-circle-img {
+  background: #fff !important;
+  overflow: hidden;
+  padding: 4px;
+}
+.logo-circle-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
+}
+
 /* ---------- Misc ---------- */
 .uhs-empty-state {
   text-align: center;
@@ -451,6 +466,18 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 
 /* Read-only viewers: hide all write/admin-only controls */
 .role-viewer .admin-only { display: none !important; }
+
+/* Read-only viewers: make disabled fields look intentional, not broken */
+.role-viewer .form-control:disabled,
+.role-viewer .form-select:disabled,
+.role-viewer textarea:disabled {
+  background-color: var(--uhs-green-50);
+  color: var(--uhs-text);
+  opacity: 1;
+  border-color: var(--uhs-border);
+  cursor: default;
+  -webkit-text-fill-color: var(--uhs-text); /* keep text crisp on Safari/iOS */
+}
 
 /* ---------- Sortable table headers ---------- */
 .uhs-sortable { cursor: pointer; user-select: none; position: relative; padding-right: 1.4rem !important; }
@@ -781,3 +808,25 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
   display: none;
 }
 .uhs-field-warning.show { display: block; animation: fadeInUp .2s ease both; }
+
+/* Password show/hide toggle */
+.uhs-pass-wrap { position: relative; }
+.uhs-pass-input { padding-right: 2.75rem !important; }
+.uhs-pass-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 2.75rem;
+  border: none;
+  background: transparent;
+  color: var(--uhs-muted, #6E7B70);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  border-radius: 0 var(--uhs-radius-sm, .5rem) var(--uhs-radius-sm, .5rem) 0;
+}
+.uhs-pass-toggle:hover { color: var(--uhs-green-600, #2E8B45); }
+.uhs-pass-toggle:focus-visible { outline: 2px solid var(--uhs-green-600, #2E8B45); outline-offset: -2px; }

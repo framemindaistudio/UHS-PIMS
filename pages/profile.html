@@ -80,6 +80,9 @@
   document.getElementById("profileRole").textContent =
     role === "admin" ? "Administrator (full access)" : "Viewer (read-only)";
 
+  Utils.attachPasswordToggle("newPassword");
+  Utils.attachPasswordToggle("confirmPassword");
+
   document.getElementById("pwdForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const pwd = document.getElementById("newPassword").value;

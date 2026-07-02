@@ -135,5 +135,35 @@ const Utils = {
 
   getQueryParam(name) {
     return new URLSearchParams(window.location.search).get(name);
+  },
+
+  /**
+   * Turns a password <input> into one with a show/hide eye toggle.
+   * Non-destructive: keeps the input's classes and id; wraps it in a
+   * relatively-positioned container with an appended toggle button.
+   */
+  attachPasswordToggle(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input || input.dataset.toggleAttached) return;
+    input.dataset.toggleAttached = "1";
+
+    const wrap = document.createElement("div");
+    wrap.className = "uhs-pass-wrap";
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+    input.classList.add("uhs-pass-input");
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "uhs-pass-toggle";
+    btn.setAttribute("aria-label", "Show password");
+    btn.innerHTML = `<i class="bi bi-eye"></i>`;
+    btn.addEventListener("click", () => {
+      const reveal = input.type === "password";
+      input.type = reveal ? "text" : "password";
+      btn.innerHTML = reveal ? `<i class="bi bi-eye-slash"></i>` : `<i class="bi bi-eye"></i>`;
+      btn.setAttribute("aria-label", reveal ? "Hide password" : "Show password");
+    });
+    wrap.appendChild(btn);
   }
 };

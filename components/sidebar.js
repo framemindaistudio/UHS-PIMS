@@ -25,10 +25,16 @@ function renderSidebar(activeKey) {
     </a>
   `).join("");
 
+  const brand = (typeof APP_CONFIG !== "undefined" && APP_CONFIG.branding) || {};
+  const logoMark = brand.logoUrl
+    ? `<div class="logo-circle logo-circle-img"><img src="${brand.logoUrl}" alt="Logo"></div>`
+    : `<div class="logo-circle"><i class="bi bi-flower1"></i></div>`;
+  const footerName = brand.footerName || "University of Horticultural Sciences";
+
   mount.innerHTML = `
     <div class="uhs-sidebar" id="uhsSidebar">
       <div class="uhs-sidebar-brand">
-        <div class="logo-circle"><i class="bi bi-flower1"></i></div>
+        ${logoMark}
         <div class="brand-text">
           <div class="b1">UHS-PIMS</div>
           <div class="b2">Project Information System</div>
@@ -46,7 +52,7 @@ function renderSidebar(activeKey) {
         </a>
       </nav>
       <div class="uhs-sidebar-footer">
-        University of Horticultural Sciences
+        ${footerName}
       </div>
     </div>
     <div class="uhs-sidebar-overlay" id="uhsSidebarOverlay"></div>

@@ -260,6 +260,37 @@ function buildPayload() {
   };
 }
 
+// Track unsaved edits so we can warn before the user navigates away.
+let formDirty = false;
+let savingOrLeaving = false;
+function markDirty() { formDirty = true; }
+function beforeUnloadHandler(e) {
+  if (formDirty && !savingOrLeaving) {
+    e.preventDefault();
+    e.returnValue = "";
+    return "";
+  }
+}
+// Intercept in-app navigation (Back / Cancel links) so we can confirm first.
+async function confirmLeave(targetHref) {
+  if (!formDirty || savingOrLeaving) {
+    savingOrLeaving = true;
+    window.location.href = targetHref;
+    return;
+  }
+  const ok = await Utils.confirm({
+    title: "Discard changes?",
+    message: "You have unsaved changes on this form. If you leave now, they will be lost.",
+    confirmText: "Discard & leave",
+    cancelText: "Stay on page",
+    danger: true
+  });
+  if (ok) {
+    savingOrLeaving = true;
+    window.location.href = targetHref;
+  }
+}
+
 (async () => {
   const session = await Auth.requireAuth();
   if (!session) return;
@@ -282,12 +313,28 @@ function buildPayload() {
     }
   }
 
+  const isAdmin = await Auth.isAdmin();
+
   // Read-only viewers can see the form but not change/save it.
-  if (!(await Auth.isAdmin())) {
+  if (!isAdmin) {
     document.getElementById("formHeading").textContent = editId ? "View Project" : "Project";
     document.querySelectorAll("#projectForm input, #projectForm select, #projectForm textarea")
       .forEach(el => el.disabled = true);
     document.getElementById("saveBtn").classList.add("d-none");
+  } else {
+    // Only editors get dirty-tracking + leave guards.
+    document.querySelectorAll("#projectForm input, #projectForm select, #projectForm textarea")
+      .forEach(el => {
+        el.addEventListener("input", markDirty);
+        el.addEventListener("change", markDirty);
+      });
+    window.addEventListener("beforeunload", beforeUnloadHandler);
+    document.querySelectorAll('a[href="projects.html"]').forEach(a => {
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        confirmLeave(a.getAttribute("href"));
+      });
+    });
   }
 
   document.getElementById("projectForm").addEventListener("submit", async (e) => {
@@ -311,6 +358,7 @@ function buildPayload() {
         await DataService.addProject(payload);
         Utils.toast("Project added successfully.");
       }
+      savingOrLeaving = true;  // suppress the unsaved-changes guard on our own redirect
       setTimeout(() => window.location.href = "projects.html", 600);
     } catch (err) {
       Utils.toast("Failed to save project: " + err.message, "error");

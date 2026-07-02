@@ -36,7 +36,7 @@
   <div class="login-form-panel">
     <div class="login-card">
       <div class="text-center">
-        <div class="logo-circle"><i class="bi bi-flower1"></i></div>
+        <div class="logo-circle" id="loginLogo"><i class="bi bi-flower1"></i></div>
         <h4 class="fw-bold mb-0">UHS-PIMS</h4>
         <p class="text-muted small mb-4">University of Horticultural Sciences<br>Project Information Management System</p>
       </div>
@@ -70,8 +70,20 @@
 <script src="../config/supabase.js"></script>
 <script src="../config/config.js"></script>
 <script src="../components/auth.js"></script>
+<script src="../assets/js/utils.js"></script>
 <script>
   Auth.redirectIfLoggedIn();
+  Utils.attachPasswordToggle("password");
+
+  // Swap in a custom logo if one is configured (branding.logoUrl).
+  const brandLogo = (typeof APP_CONFIG !== "undefined" && APP_CONFIG.branding && APP_CONFIG.branding.logoUrl) || null;
+  if (brandLogo) {
+    const mark = document.getElementById("loginLogo");
+    if (mark) {
+      mark.classList.add("logo-circle-img");
+      mark.innerHTML = `<img src="${brandLogo}" alt="Logo">`;
+    }
+  }
 
   const form = document.getElementById("loginForm");
   const alertBox = document.getElementById("loginAlert");
