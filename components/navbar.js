@@ -16,6 +16,9 @@ async function renderTopbar(title) {
         <h1>${title}</h1>
       </div>
       <div class="d-flex align-items-center gap-2">
+        <button class="uhs-theme-toggle" id="uhsThemeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+          <i class="bi bi-moon-stars"></i>
+        </button>
         <span class="d-none d-sm-inline text-muted small" id="uhsUserEmail"></span>
         <div class="logo-circle bg-success-subtle text-success d-flex align-items-center justify-content-center rounded-circle" style="width:36px;height:36px;">
           <i class="bi bi-person-fill"></i>
@@ -23,6 +26,18 @@ async function renderTopbar(title) {
       </div>
     </div>
   `;
+
+  // Theme toggle — reflect current theme and swap on click.
+  const themeBtn = document.getElementById("uhsThemeToggle");
+  if (themeBtn && typeof Theme !== "undefined") {
+    const setIcon = () => {
+      themeBtn.innerHTML = Theme.get() === "dark"
+        ? `<i class="bi bi-sun"></i>`
+        : `<i class="bi bi-moon-stars"></i>`;
+    };
+    setIcon();
+    themeBtn.addEventListener("click", () => { Theme.toggle(); setIcon(); });
+  }
 
   const email = await Auth.currentUserEmail();
   const el = document.getElementById("uhsUserEmail");

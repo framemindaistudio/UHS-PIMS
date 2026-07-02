@@ -137,6 +137,11 @@ const DataService = {
     const { error } = await supabaseClient.from("projects").delete().eq("id", id);
     if (error) throw error;
   },
+  async deleteProjectsBulk(ids) {
+    if (!ids || !ids.length) return;
+    const { error } = await supabaseClient.from("projects").delete().in("id", ids);
+    if (error) throw error;
+  },
 
   // ---------------- Users (admin only) ----------------
   async listUsers() {
@@ -175,6 +180,7 @@ const DataService = {
       byAgency: {},
       byYear: {},
       byCollege: {},
+      byDeptCost: {},
       recent: [...data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5)
     };
 
@@ -188,6 +194,8 @@ const DataService = {
       }
       const college = p.college_name || "Unspecified";
       stats.byCollege[college] = (stats.byCollege[college] || 0) + 1;
+      const dept = p.department_name || "Unspecified";
+      stats.byDeptCost[dept] = (stats.byDeptCost[dept] || 0) + Number(p.project_cost || 0);
     });
 
     return stats;

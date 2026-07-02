@@ -119,6 +119,47 @@ const Utils = {
   },
 
   /**
+   * Promise-based styled text-input dialog — replaces native prompt().
+   * Resolves the trimmed string, or null if cancelled.
+   */
+  prompt({ title = "Enter a value", message = "", placeholder = "", confirmText = "Save", cancelText = "Cancel", defaultValue = "" } = {}) {
+    return new Promise((resolve) => {
+      const id = "uhsPromptModal";
+      document.getElementById(id)?.remove();
+
+      const wrap = document.createElement("div");
+      wrap.className = "modal fade";
+      wrap.id = id;
+      wrap.tabIndex = -1;
+      wrap.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-body p-4">
+              <h6 class="fw-bold mb-1">${this.escapeHtml(title)}</h6>
+              ${message ? `<p class="text-muted small mb-3">${this.escapeHtml(message)}</p>` : ""}
+              <input type="text" class="form-control" data-uhs-input placeholder="${this.escapeHtml(placeholder)}" value="${this.escapeHtml(defaultValue)}">
+              <div class="d-flex gap-2 justify-content-end mt-4">
+                <button type="button" class="btn btn-outline-secondary px-4" data-uhs-cancel>${this.escapeHtml(cancelText)}</button>
+                <button type="button" class="btn btn-uhs-primary px-4" data-uhs-ok>${this.escapeHtml(confirmText)}</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      document.body.appendChild(wrap);
+      const modal = new bootstrap.Modal(wrap);
+      const input = wrap.querySelector("[data-uhs-input]");
+      let result = null;
+      const submit = () => { result = input.value.trim(); modal.hide(); };
+      wrap.querySelector("[data-uhs-ok]").addEventListener("click", submit);
+      wrap.querySelector("[data-uhs-cancel]").addEventListener("click", () => modal.hide());
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submit(); } });
+      wrap.addEventListener("shown.bs.modal", () => input.focus());
+      wrap.addEventListener("hidden.bs.modal", () => { wrap.remove(); resolve(result); });
+      modal.show();
+    });
+  },
+
+  /**
    * Returns HTML string of shimmer skeleton rows for a loading table.
    */
   skeletonRows(cols, rows = 5) {
@@ -165,5 +206,28 @@ const Utils = {
       btn.setAttribute("aria-label", reveal ? "Hide password" : "Show password");
     });
     wrap.appendChild(btn);
+  }
+};
+
+/**
+ * Theme (light/dark) — opt-in, persisted per device.
+ * The <head> of each page also runs a tiny inline copy of get()+apply()
+ * before the stylesheet loads, to avoid a flash of the wrong theme.
+ */
+const Theme = {
+  KEY: "uhs-theme",
+  get() {
+    try { return localStorage.getItem(this.KEY) === "dark" ? "dark" : "light"; }
+    catch (_) { return "light"; }
+  },
+  apply(mode) {
+    const m = mode || this.get();
+    document.documentElement.setAttribute("data-theme", m);
+  },
+  toggle() {
+    const next = this.get() === "dark" ? "light" : "dark";
+    try { localStorage.setItem(this.KEY, next); } catch (_) {}
+    this.apply(next);
+    return next;
   }
 };
