@@ -27,9 +27,10 @@
           <h5 class="fw-bold mb-0">Employees</h5>
           <p class="text-muted small mb-0">Staff register with automatic retirement dates (date of birth + <span id="retAge">62</span> years)</p>
         </div>
-        <button class="btn btn-uhs-primary admin-only" onclick="openAddModal()">
-          <i class="bi bi-plus-lg"></i> Add Employee
-        </button>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-success" id="exportBtn"><i class="bi bi-filetype-xlsx"></i> Export</button>
+          <button class="btn btn-uhs-primary admin-only" onclick="openAddModal()"><i class="bi bi-plus-lg"></i> Add Employee</button>
+        </div>
       </div>
 
       <!-- Search + summary -->
@@ -38,7 +39,7 @@
           <div class="col-md-5">
             <div class="input-group">
               <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-              <input type="text" id="searchInput" class="form-control" placeholder="Search by name, designation or college...">
+              <input type="text" id="searchInput" class="form-control" placeholder="Search name, designation, discipline, college...">
             </div>
           </div>
           <div class="col-md-7">
@@ -54,11 +55,11 @@
               <tr id="empHead">
                 <th class="uhs-sortable" data-col="name">Name</th>
                 <th>Designation</th>
+                <th>Discipline</th>
                 <th>College / Station</th>
-                <th class="uhs-sortable" data-col="date_of_birth">Date of Birth</th>
-                <th class="uhs-sortable" data-col="retirement">Retirement Date</th>
+                <th class="uhs-sortable" data-col="retirement">Retirement</th>
                 <th>Status</th>
-                <th class="text-end admin-only">Actions</th>
+                <th class="text-end">Actions</th>
               </tr>
             </thead>
             <tbody id="tableBody">
@@ -73,9 +74,25 @@
   </div>
 </div>
 
-<!-- Add/Edit Modal -->
+<!-- Detail (view) modal -->
+<div class="modal fade" id="viewModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h6 class="modal-title fw-bold" id="vName"></h6>
+          <div class="text-muted small" id="vSub"></div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="vBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit modal -->
 <div class="modal fade" id="empModal" tabindex="-1">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <form id="empForm">
         <div class="modal-header">
@@ -83,36 +100,46 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Full Name *</label>
-            <input type="text" class="form-control" id="empName" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Designation</label>
-            <input type="text" class="form-control" id="empDesignation" list="designationList" placeholder="e.g. Associate Professor">
-            <datalist id="designationList"></datalist>
-          </div>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">Date of Birth</label>
-              <input type="date" class="form-control" id="empDob">
-              <div class="form-text" id="retirementHint"></div>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">College / Station</label>
-              <select class="form-select" id="empCollege"><option value="">Select college</option></select>
+
+          <div class="uhs-form-section">
+            <div class="uhs-form-section-head"><span class="sec-icon"><i class="bi bi-person"></i></span><div><h6>Personal</h6><div class="sec-sub">Name, designation and date of birth</div></div></div>
+            <div class="row g-3">
+              <div class="col-md-6"><label class="form-label fw-semibold">Full Name *</label><input type="text" class="form-control" id="empName" required></div>
+              <div class="col-md-6"><label class="form-label fw-semibold">Designation</label><input type="text" class="form-control" id="empDesignation" list="designationList" placeholder="e.g. Associate Professor"><datalist id="designationList"></datalist></div>
+              <div class="col-md-4"><label class="form-label fw-semibold">Date of Birth</label><input type="date" class="form-control" id="empDob"><div class="form-text" id="retirementHint"></div></div>
+              <div class="col-md-4"><label class="form-label fw-semibold">Email</label><input type="email" class="form-control" id="empEmail"></div>
+              <div class="col-md-4"><label class="form-label fw-semibold">Phone</label><input type="text" class="form-control" id="empPhone"></div>
             </div>
           </div>
-          <div class="row g-3 mt-0">
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">Email</label>
-              <input type="email" class="form-control" id="empEmail">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">Phone</label>
-              <input type="text" class="form-control" id="empPhone">
+
+          <div class="uhs-form-section">
+            <div class="uhs-form-section-head"><span class="sec-icon"><i class="bi bi-diagram-3"></i></span><div><h6>Posting &amp; Academic</h6><div class="sec-sub">Where they work and their discipline</div></div></div>
+            <div class="row g-3">
+              <div class="col-md-4"><label class="form-label fw-semibold">Academic Level</label><input type="number" min="1" max="20" class="form-control" id="empLevel" placeholder="e.g. 13"></div>
+              <div class="col-md-8"><label class="form-label fw-semibold">Discipline</label><input type="text" class="form-control" id="empDiscipline" list="disciplineList" placeholder="e.g. Fruit Science"><datalist id="disciplineList"></datalist></div>
+              <div class="col-md-6"><label class="form-label fw-semibold">Present Position</label><input type="text" class="form-control" id="empPosition" placeholder="e.g. Professor, Dean, ADRE"></div>
+              <div class="col-md-6"><label class="form-label fw-semibold">College / Station</label><select class="form-select" id="empCollege"><option value="">Select college</option></select></div>
+              <div class="col-md-6"><label class="form-label fw-semibold">Working Office</label><input type="text" class="form-control" id="empOffice" placeholder="e.g. College of Horticulture"></div>
+              <div class="col-md-6"><label class="form-label fw-semibold">Place of Working</label><input type="text" class="form-control" id="empPlace" placeholder="e.g. Bagalkot"></div>
+              <div class="col-md-6"><label class="form-label fw-semibold">RPC (K-K)</label><input type="text" class="form-control" id="empRpc"></div>
+              <div class="col-md-6"><label class="form-label fw-semibold">Promotion / Appointment Status</label><input type="text" class="form-control" id="empPromo" placeholder="e.g. CAS"></div>
             </div>
           </div>
+
+          <div class="uhs-form-section">
+            <div class="uhs-form-section-head"><span class="sec-icon"><i class="bi bi-calendar-range"></i></span><div><h6>Service History (CAS)</h6><div class="sec-sub">Entry / promotion dates per cadre — kept as recorded</div></div></div>
+            <div class="row g-3">
+              <div class="col-md-6"><label class="form-label fw-semibold">Entry into Service (permanent)</label><input type="text" class="form-control" id="empDtService"></div>
+              <div class="col-md-6"><label class="form-label fw-semibold">Instructor Cadre</label><input type="text" class="form-control" id="empDtInstructor"></div>
+              <div class="col-md-4"><label class="form-label fw-semibold">Asst. Professor (L10)</label><input type="text" class="form-control" id="empDtAsst10"></div>
+              <div class="col-md-4"><label class="form-label fw-semibold">Asst. Professor (L11)</label><input type="text" class="form-control" id="empDtAsst11"></div>
+              <div class="col-md-4"><label class="form-label fw-semibold">Asst. Professor (L12)</label><input type="text" class="form-control" id="empDtAsst12"></div>
+              <div class="col-md-4"><label class="form-label fw-semibold">Associate Professor (L13A)</label><input type="text" class="form-control" id="empDtAssoc13a"></div>
+              <div class="col-md-4"><label class="form-label fw-semibold">Professor (L14)</label><input type="text" class="form-control" id="empDtProf14"></div>
+              <div class="col-md-4"><label class="form-label fw-semibold">Professor (L15)</label><input type="text" class="form-control" id="empDtProf15"></div>
+            </div>
+          </div>
+
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -125,6 +152,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="../config/supabase.js"></script>
 <script src="../config/config.js"></script>
 <script src="../components/auth.js"></script>
@@ -141,11 +169,21 @@ let employees = [];
 let sortBy = "retirement";
 let sortDir = "asc";
 
+// db column -> add/edit input id (single source of truth for the form)
+const FIELDS = {
+  name: "empName", designation: "empDesignation", date_of_birth: "empDob",
+  email: "empEmail", phone: "empPhone", academic_level: "empLevel",
+  discipline: "empDiscipline", present_position: "empPosition", college_id: "empCollege",
+  working_office: "empOffice", place_of_working: "empPlace", rpc: "empRpc",
+  promotion_status: "empPromo", dt_service: "empDtService", dt_instructor: "empDtInstructor",
+  dt_asst_10: "empDtAsst10", dt_asst_11: "empDtAsst11", dt_asst_12: "empDtAsst12",
+  dt_assoc_13a: "empDtAssoc13a", dt_prof_14: "empDtProf14", dt_prof_15: "empDtProf15"
+};
+
 function retirementOf(e) {
   const rd = Utils.retirementDate(e.date_of_birth);
   return rd ? rd.getTime() : Infinity;   // undated employees sort last
 }
-
 function statusBadge(e) {
   const rd = Utils.retirementDate(e.date_of_birth);
   if (!rd) return "—";
@@ -168,12 +206,10 @@ function openEditModal(id) {
   if (!e) return;
   editId = id;
   document.getElementById("empModalTitle").textContent = "Edit Employee";
-  document.getElementById("empName").value = e.name || "";
-  document.getElementById("empDesignation").value = e.designation || "";
-  document.getElementById("empDob").value = e.date_of_birth || "";
-  document.getElementById("empCollege").value = e.college_id || "";
-  document.getElementById("empEmail").value = e.email || "";
-  document.getElementById("empPhone").value = e.phone || "";
+  document.getElementById("empForm").reset();
+  for (const [col, inputId] of Object.entries(FIELDS)) {
+    document.getElementById(inputId).value = e[col] == null ? "" : e[col];
+  }
   updateRetirementHint();
   new bootstrap.Modal(document.getElementById("empModal")).show();
 }
@@ -191,11 +227,45 @@ function deleteWithUndo(id) {
   });
 }
 
+function openView(id) {
+  const e = employees.find(x => x.id === id);
+  if (!e) return;
+  const rd = Utils.retirementDate(e.date_of_birth);
+  document.getElementById("vName").textContent = e.name;
+  document.getElementById("vSub").textContent = [e.designation, e.discipline].filter(Boolean).join(" · ") || "—";
+  const F = (l, v) => `<div class="col-sm-6 col-lg-4"><div class="text-muted small">${l}</div><div class="fw-semibold">${Utils.escapeHtml(v == null || v === "" ? "—" : String(v))}</div></div>`;
+  const hist = [
+    ["Entry into service", e.dt_service], ["Instructor cadre", e.dt_instructor],
+    ["Asst. Professor (L10)", e.dt_asst_10], ["Asst. Professor (L11)", e.dt_asst_11],
+    ["Asst. Professor (L12)", e.dt_asst_12], ["Associate Professor (L13A)", e.dt_assoc_13a],
+    ["Professor (L14)", e.dt_prof_14], ["Professor (L15)", e.dt_prof_15]
+  ];
+  document.getElementById("vBody").innerHTML = `
+    <div class="row g-3 mb-2">
+      ${F("Designation", e.designation)}
+      ${F("Academic Level", e.academic_level)}
+      ${F("Discipline", e.discipline)}
+      ${F("Present Position", e.present_position)}
+      ${F("Working Office", e.working_office)}
+      ${F("Place of Working", e.place_of_working)}
+      ${F("College / Station", e.college_name)}
+      ${F("RPC (K-K)", e.rpc)}
+      ${F("Promotion / Appointment", e.promotion_status)}
+      ${F("Date of Birth", Utils.formatDate(e.date_of_birth))}
+      ${F("Retirement Date", rd ? Utils.formatDate(rd) : "—")}
+      ${F("Email", e.email)}
+      ${F("Phone", e.phone)}
+    </div>
+    <h6 class="fw-bold mb-2 mt-3">Service history (CAS)</h6>
+    <div class="table-responsive"><table class="table table-sm table-uhs mb-0"><tbody>
+      ${hist.map(([l, v]) => `<tr><td class="text-muted" style="width:55%">${l}</td><td class="fw-semibold">${Utils.escapeHtml(v == null || v === "" ? "—" : String(v))}</td></tr>`).join("")}
+    </tbody></table></div>`;
+  new bootstrap.Modal(document.getElementById("viewModal")).show();
+}
+
 function updateRetirementHint() {
-  const dob = document.getElementById("empDob").value;
-  const rd = Utils.retirementDate(dob);
-  document.getElementById("retirementHint").textContent =
-    rd ? `Retirement date: ${Utils.formatDate(rd)}` : "";
+  const rd = Utils.retirementDate(document.getElementById("empDob").value);
+  document.getElementById("retirementHint").textContent = rd ? `Retirement date: ${Utils.formatDate(rd)}` : "";
 }
 
 function updateSortIndicators() {
@@ -210,16 +280,11 @@ function render() {
   updateSortIndicators();
   const q = document.getElementById("searchInput").value.trim().toLowerCase();
   let rows = employees.filter(e =>
-    !q || `${e.name} ${e.designation || ""} ${e.college_name || ""}`.toLowerCase().includes(q));
+    !q || `${e.name} ${e.designation || ""} ${e.discipline || ""} ${e.college_name || ""} ${e.present_position || ""}`.toLowerCase().includes(q));
 
   const dir = sortDir === "asc" ? 1 : -1;
   rows.sort((a, b) => {
     if (sortBy === "retirement") return (retirementOf(a) - retirementOf(b)) * dir;
-    if (sortBy === "date_of_birth") {
-      const av = a.date_of_birth ? new Date(a.date_of_birth).getTime() : Infinity;
-      const bv = b.date_of_birth ? new Date(b.date_of_birth).getTime() : Infinity;
-      return (av - bv) * dir;
-    }
     return String(a[sortBy] || "").localeCompare(String(b[sortBy] || "")) * dir;
   });
 
@@ -233,13 +298,14 @@ function render() {
       <tr data-id="${e.id}">
         <td class="fw-semibold">${Utils.escapeHtml(e.name)}</td>
         <td>${Utils.escapeHtml(e.designation || "—")}</td>
-        <td>${Utils.escapeHtml(e.college_name || "—")}</td>
-        <td>${Utils.formatDate(e.date_of_birth)}</td>
+        <td>${Utils.escapeHtml(e.discipline || "—")}</td>
+        <td>${Utils.escapeHtml(e.college_name || e.place_of_working || "—")}</td>
         <td>${rd ? Utils.formatDate(rd) : "—"}</td>
         <td>${statusBadge(e)}</td>
-        <td class="text-end admin-only">
-          <button class="btn btn-sm btn-outline-secondary me-1" onclick="openEditModal('${e.id}')" title="Edit"><i class="bi bi-pencil"></i></button>
-          <button class="btn btn-sm btn-outline-danger" onclick="deleteWithUndo('${e.id}')" title="Delete"><i class="bi bi-trash"></i></button>
+        <td class="text-end">
+          <button class="btn btn-sm btn-outline-secondary me-1" onclick="openView('${e.id}')" title="View details"><i class="bi bi-eye"></i></button>
+          <button class="btn btn-sm btn-outline-secondary me-1 admin-only" onclick="openEditModal('${e.id}')" title="Edit"><i class="bi bi-pencil"></i></button>
+          <button class="btn btn-sm btn-outline-danger admin-only" onclick="deleteWithUndo('${e.id}')" title="Delete"><i class="bi bi-trash"></i></button>
         </td>
       </tr>`;
   }).join("");
@@ -259,6 +325,28 @@ function renderSummary() {
     (dobMissing ? ` · <span class="text-muted">${dobMissing} without a date of birth</span>` : "");
 }
 
+function exportExcel() {
+  if (employees.length === 0) { Utils.toast("No data to export.", "warning"); return; }
+  const rows = employees.map(e => {
+    const rd = Utils.retirementDate(e.date_of_birth);
+    return {
+      "Name": e.name, "Designation": e.designation || "", "Academic Level": e.academic_level ?? "",
+      "Discipline": e.discipline || "", "Present Position": e.present_position || "",
+      "Working Office": e.working_office || "", "Place of Working": e.place_of_working || "",
+      "College/Station": e.college_name || "", "RPC": e.rpc || "", "Promotion Status": e.promotion_status || "",
+      "Date of Birth": e.date_of_birth || "", "Retirement Date": rd ? rd.toISOString().slice(0, 10) : "",
+      "Entry into Service": e.dt_service || "", "Instructor Cadre": e.dt_instructor || "",
+      "Asst Prof L10": e.dt_asst_10 || "", "Asst Prof L11": e.dt_asst_11 || "", "Asst Prof L12": e.dt_asst_12 || "",
+      "Assoc Prof L13A": e.dt_assoc_13a || "", "Prof L14": e.dt_prof_14 || "", "Prof L15": e.dt_prof_15 || "",
+      "Email": e.email || "", "Phone": e.phone || ""
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Employees");
+  XLSX.writeFile(wb, `UHS-PIMS-Employees-${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 async function loadColleges() {
   collegesCache = await DataService.listColleges();
   const sel = document.getElementById("empCollege");
@@ -271,6 +359,9 @@ async function loadEmployees() {
   tbody.innerHTML = Utils.skeletonRows(7);
   try {
     employees = await DataService.listEmployees();
+    // build discipline suggestions
+    const disc = [...new Set(employees.map(e => e.discipline).filter(Boolean))].sort();
+    document.getElementById("disciplineList").innerHTML = disc.map(d => `<option value="${Utils.escapeHtml(d)}">`).join("");
     render();
     renderSummary();
   } catch (err) {
@@ -279,7 +370,7 @@ async function loadEmployees() {
       tbody.innerHTML = `<tr><td colspan="7" class="py-4">
         <div class="uhs-empty-state">
           <i class="bi bi-database-gear"></i>
-          The Employees table isn't set up yet. Run <code>database/migration-v4-employees.sql</code> in the Supabase SQL Editor, then refresh this page.
+          The Employees table isn't set up yet. Run <code>database/migration-v4-employees.sql</code> (and <code>migration-v6-employees-full.sql</code>) in the Supabase SQL Editor, then refresh.
         </div></td></tr>`;
     } else {
       tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${Utils.escapeHtml(err.message)}</td></tr>`;
@@ -289,14 +380,14 @@ async function loadEmployees() {
 
 document.getElementById("empForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const payload = {
-    name: document.getElementById("empName").value.trim(),
-    designation: document.getElementById("empDesignation").value.trim() || null,
-    date_of_birth: document.getElementById("empDob").value || null,
-    college_id: document.getElementById("empCollege").value || null,
-    email: document.getElementById("empEmail").value.trim() || null,
-    phone: document.getElementById("empPhone").value.trim() || null
-  };
+  const val = (id) => document.getElementById(id).value.trim();
+  const payload = {};
+  for (const [col, inputId] of Object.entries(FIELDS)) {
+    let v = val(inputId);
+    if (col === "academic_level") v = v ? Number(v) : null;
+    payload[col] = v === "" ? null : v;
+  }
+  payload.name = val("empName");   // required, keep raw
   try {
     if (editId) {
       await DataService.updateEmployee(editId, payload);
@@ -312,7 +403,6 @@ document.getElementById("empForm").addEventListener("submit", async (e) => {
   }
 });
 
-
 (async () => {
   const session = await Auth.requireAuth();
   if (!session) return;
@@ -325,6 +415,7 @@ document.getElementById("empForm").addEventListener("submit", async (e) => {
     document.getElementById("designationList").insertAdjacentHTML("beforeend", `<option value="${d}">`));
   document.getElementById("empDob").addEventListener("change", updateRetirementHint);
   document.getElementById("searchInput").addEventListener("input", Utils.debounce(render, 250));
+  document.getElementById("exportBtn").addEventListener("click", exportExcel);
   document.getElementById("empHead").addEventListener("click", (e) => {
     const th = e.target.closest(".uhs-sortable");
     if (!th) return;
