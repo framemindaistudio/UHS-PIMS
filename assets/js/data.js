@@ -1,5 +1,5 @@
 /**
- * UHS-PIMS — Data Service Layer
+ * UHS-RIMS — Data Service Layer
  * Wraps all Supabase table/view queries used across pages.
  */
 const DataService = {

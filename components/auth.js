@@ -1,5 +1,5 @@
 /**
- * UHS-PIMS — Auth Helper
+ * UHS-RIMS — Auth Helper
  * Wraps Supabase Auth: login, logout, session check, route protection.
  * Requires config/supabase.js to be loaded first.
  */

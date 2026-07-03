@@ -1,5 +1,5 @@
 /**
- * UHS-PIMS — Sidebar Component
+ * UHS-RIMS — Sidebar Component
  * Renders the left navigation sidebar into <div id="uhs-sidebar-mount"></div>
  * Usage: call renderSidebar("dashboard") with the current page key.
  */
@@ -30,15 +30,17 @@ function renderSidebar(activeKey) {
   const logoMark = brand.logoUrl
     ? `<div class="logo-circle logo-circle-img"><img src="${brand.logoUrl}" alt="Logo"></div>`
     : `<div class="logo-circle"><i class="bi bi-flower1"></i></div>`;
-  const footerName = brand.footerName || "University of Horticultural Sciences";
+  const appName = brand.appName || "UHS-RIMS";
+  const tagline = brand.tagline || "Director of Research";
+  const footerName = brand.footerName || "University of Horticultural Sciences, Bagalkot";
 
   mount.innerHTML = `
     <div class="uhs-sidebar" id="uhsSidebar">
       <div class="uhs-sidebar-brand">
         ${logoMark}
         <div class="brand-text">
-          <div class="b1">UHS-PIMS</div>
-          <div class="b2">Project Information System</div>
+          <div class="b1">${appName}</div>
+          <div class="b2">${tagline}</div>
         </div>
       </div>
       <nav class="uhs-nav">
@@ -73,7 +75,7 @@ function renderSidebar(activeKey) {
     e.preventDefault();
     const ok = await Utils.confirm({
       title: "Log out?",
-      message: "You'll need to sign in again to access UHS-PIMS.",
+      message: `You'll need to sign in again to access ${appName}.`,
       confirmText: "Log out",
       danger: true,
       icon: "bi-box-arrow-right"

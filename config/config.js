@@ -1,16 +1,20 @@
 /**
- * UHS-PIMS — General App Configuration
+ * UHS-RIMS — General App Configuration
  */
 const APP_CONFIG = {
-  appName: "UHS-PIMS",
-  fullName: "UHS Project Information Management System",
-  university: "University of Horticultural Sciences",
-  // Branding — drop the university logo in later without touching code.
-  // Set logoUrl to an image path/URL (e.g. "../assets/images/logo.png") and it
-  // will replace the default flower mark in the sidebar and login screen.
+  appName: "UHS-RIMS",
+  fullName: "UHS Research Information Management System",
+  university: "University of Horticultural Sciences, Bagalkot",
+  // Branding — single source of truth for the app name, tagline, university
+  // line and logo shown in the sidebar, topbar, login screen and footer.
+  // logoUrl is resolved relative to the /pages/ folder (where every branded
+  // screen lives), so keep the "../assets/..." prefix.
   branding: {
-    logoUrl: null,
-    footerName: "University of Horticultural Sciences"
+    logoUrl: "../assets/images/Logo.png",
+    appName: "UHS-RIMS",
+    tagline: "Director of Research",
+    university: "University of Horticultural Sciences, Bagalkot",
+    footerName: "University of Horticultural Sciences, Bagalkot"
   },
   fundingTypes: ["University Funded", "External Funded"],
   statusOptions: ["Ongoing", "Completed", "Proposed", "Terminated"],

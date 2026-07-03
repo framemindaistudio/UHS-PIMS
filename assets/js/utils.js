@@ -1,5 +1,5 @@
 /**
- * UHS-PIMS — Shared Utilities
+ * UHS-RIMS — Shared Utilities
  */
 const Utils = {
   formatCurrency(value) {

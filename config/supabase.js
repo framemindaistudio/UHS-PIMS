@@ -1,5 +1,5 @@
 /**
- * UHS-PIMS — Supabase Configuration
+ * UHS-RIMS — Supabase Configuration
  * -----------------------------------------------------------
  * Fill in your own Supabase project values below.
  * Found in: Supabase Dashboard > Project Settings > API

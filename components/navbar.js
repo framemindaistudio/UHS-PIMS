@@ -1,5 +1,5 @@
 /**
- * UHS-PIMS — Topbar Component
+ * UHS-RIMS — Topbar Component
  * Renders into <div id="uhs-topbar-mount"></div>
  * Usage: renderTopbar("Dashboard")
  */
@@ -7,13 +7,21 @@ async function renderTopbar(title) {
   const mount = document.getElementById("uhs-topbar-mount");
   if (!mount) return;
 
+  const brand = (typeof APP_CONFIG !== "undefined" && APP_CONFIG.branding) || {};
+  const university = brand.university
+    || (typeof APP_CONFIG !== "undefined" && APP_CONFIG.university)
+    || "University of Horticultural Sciences, Bagalkot";
+
   mount.innerHTML = `
     <div class="uhs-topbar">
       <div class="d-flex align-items-center gap-2">
         <button class="uhs-sidebar-toggle" onclick="toggleSidebar()">
           <i class="bi bi-list"></i>
         </button>
-        <h1>${title}</h1>
+        <div class="uhs-topbar-titles">
+          <h1>${title}</h1>
+          <div class="uhs-topbar-univ">${university}</div>
+        </div>
       </div>
       <div class="d-flex align-items-center gap-2">
         <button class="uhs-theme-toggle" id="uhsThemeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">

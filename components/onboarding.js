@@ -1,5 +1,5 @@
 /**
- * UHS-PIMS — First-time Onboarding Guide
+ * UHS-RIMS — First-time Onboarding Guide
  * Shows a step-by-step welcome tour the first time the app is opened on a
  * device/browser (tracked in localStorage, per role). Content adapts to the
  * signed-in user's role: admins get the full workflow tour, read-only
@@ -13,7 +13,7 @@ const Onboarding = {
   ADMIN_STEPS: [
     {
       icon: "bi-flower1",
-      title: "Welcome to UHS-PIMS",
+      title: "Welcome to UHS-RIMS",
       text: "Your central hub for managing every horticultural research project — from proposal to publication. This quick guide walks you through how everything fits together. It takes about a minute."
     },
     {
@@ -47,7 +47,7 @@ const Onboarding = {
   VIEWER_STEPS: [
     {
       icon: "bi-flower1",
-      title: "Welcome to UHS-PIMS",
+      title: "Welcome to UHS-RIMS",
       text: "You have <b>read-only access</b> — you can browse every research project and generate reports, but not add or change data. Here's a quick tour of what you can do. It takes under a minute."
     },
     {
