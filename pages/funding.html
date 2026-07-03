@@ -83,23 +83,6 @@
   </div>
 </div>
 
-<!-- Delete Confirm Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h6 class="modal-title fw-bold">Delete Funding Agency</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">Delete <strong id="deleteAgencyName"></strong>? Projects linked to it will keep their data but lose this reference.</div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="../config/supabase.js"></script>
@@ -113,7 +96,6 @@
 <script src="../components/onboarding.js"></script>
 <script>
 let editId = null;
-let deleteId = null;
 
 function openAddModal() {
   editId = null;
@@ -129,10 +111,17 @@ function openEditModal(id, name, type) {
   new bootstrap.Modal(document.getElementById("agencyModal")).show();
 }
 
-function openDeleteModal(id, name) {
-  deleteId = id;
-  document.getElementById("deleteAgencyName").textContent = name;
-  new bootstrap.Modal(document.getElementById("deleteModal")).show();
+// One-click delete: remove the row immediately, real delete deferred with Undo.
+function deleteWithUndo(id) {
+  document.querySelector(`#tableBody tr[data-id="${id}"]`)?.remove();
+  Utils.undoToast({
+    message: "Funding agency deleted.",
+    onUndo: () => loadAgencies(),
+    onCommit: async () => {
+      try { await DataService.deleteFundingAgency(id); loadAgencies(); }
+      catch (err) { Utils.toast("Delete failed: " + err.message, "error"); loadAgencies(); }
+    }
+  });
 }
 
 async function loadAgencies() {
@@ -150,7 +139,7 @@ async function loadAgencies() {
         <td>${Utils.escapeHtml(a.agency_type || "—")}</td>
         <td class="text-end admin-only">
           <button class="btn btn-sm btn-outline-secondary me-1" onclick="openEditModal('${a.id}', '${Utils.escapeHtml(a.name).replace(/'/g,"\\'")}', '${a.agency_type || ""}')"><i class="bi bi-pencil"></i></button>
-          <button class="btn btn-sm btn-outline-danger" onclick="openDeleteModal('${a.id}', '${Utils.escapeHtml(a.name).replace(/'/g,"\\'")}')"><i class="bi bi-trash"></i></button>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteWithUndo('${a.id}')"><i class="bi bi-trash"></i></button>
         </td>
       </tr>
     `).join("");
@@ -178,21 +167,6 @@ document.getElementById("agencyForm").addEventListener("submit", async (e) => {
   } catch (err) {
     Utils.toast("Error: " + err.message, "error");
   }
-});
-
-document.getElementById("confirmDeleteBtn").addEventListener("click", () => {
-  if (!deleteId) return;
-  const id = deleteId;
-  bootstrap.Modal.getInstance(document.getElementById("deleteModal")).hide();
-  document.querySelector(`#tableBody tr[data-id="${id}"]`)?.remove();   // hide immediately
-  Utils.undoToast({
-    message: "Funding agency deleted.",
-    onUndo: () => loadAgencies(),                                       // never deleted — just restore the view
-    onCommit: async () => {
-      try { await DataService.deleteFundingAgency(id); loadAgencies(); }
-      catch (err) { Utils.toast("Delete failed: " + err.message, "error"); loadAgencies(); }
-    }
-  });
 });
 
 (async () => {

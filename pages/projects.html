@@ -116,25 +116,6 @@
   </div>
 </div>
 
-<!-- Delete Confirm Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h6 class="modal-title fw-bold">Delete Project</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        Are you sure you want to delete <strong id="deleteProjectTitle"></strong>? This action cannot be undone.
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Import Modal -->
 <div class="modal fade" id="importModal" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -180,7 +161,6 @@
 <script src="../assets/js/data.js"></script>
 <script src="../components/onboarding.js"></script>
 <script>
-let deleteTargetId = null;
 let departmentsCache = [];
 
 // Pagination + sort state
@@ -309,7 +289,7 @@ async function loadProjects() {
         <td>${Utils.statusBadge(p.status)}</td>
         <td class="text-end admin-only">
           <a href="project-form.html?id=${p.id}" class="btn btn-sm btn-outline-secondary me-1" title="Edit"><i class="bi bi-pencil"></i></a>
-          <button class="btn btn-sm btn-outline-danger" title="Delete" onclick="openDeleteModal('${p.id}', '${Utils.escapeHtml(p.title).replace(/'/g, "\\'")}')"><i class="bi bi-trash"></i></button>
+          <button class="btn btn-sm btn-outline-danger" title="Delete" onclick="deleteWithUndo('${p.id}')"><i class="bi bi-trash"></i></button>
         </td>
       </tr>
     `).join("");
@@ -321,10 +301,17 @@ async function loadProjects() {
   }
 }
 
-function openDeleteModal(id, title) {
-  deleteTargetId = id;
-  document.getElementById("deleteProjectTitle").textContent = title;
-  new bootstrap.Modal(document.getElementById("deleteModal")).show();
+// One-click delete: remove the row immediately, real delete deferred with Undo.
+function deleteWithUndo(id) {
+  document.querySelector(`#projectsBody tr[data-id="${id}"]`)?.remove();
+  Utils.undoToast({
+    message: "Project deleted.",
+    onUndo: () => loadProjects(),
+    onCommit: async () => {
+      try { await DataService.deleteProject(id); loadProjects(); }
+      catch (err) { Utils.toast("Failed to delete project: " + err.message, "error"); loadProjects(); }
+    }
+  });
 }
 
 /* ---------------- Bulk multi-select (admin) ----------------
@@ -348,18 +335,10 @@ function wireRowSelection() {
   document.querySelectorAll(".row-select").forEach(cb => cb.addEventListener("change", updateBulkBar));
   updateBulkBar();
 }
-async function bulkDelete() {
+function bulkDelete() {
   const ids = selectedIds();
   if (!ids.length) return;
-  const ok = await Utils.confirm({
-    title: `Delete ${ids.length} project(s)?`,
-    message: "The selected projects will be removed. You'll have a few seconds to undo.",
-    confirmText: "Delete selected",
-    danger: true,
-    icon: "bi-trash"
-  });
-  if (!ok) return;
-  // Hide the selected rows immediately; defer the real delete so it can be undone.
+  // One-click: hide the selected rows immediately; real delete deferred with Undo.
   ids.forEach(id => document.querySelector(`#projectsBody tr[data-id="${id}"]`)?.remove());
   document.getElementById("bulkBar").classList.add("d-none");
   Utils.undoToast({
@@ -415,21 +394,6 @@ function applyPreset(index) {
   document.getElementById("filterDepartment").value = f.departmentId || "";
   applyFilters();
 }
-
-document.getElementById("confirmDeleteBtn").addEventListener("click", () => {
-  if (!deleteTargetId) return;
-  const id = deleteTargetId;
-  bootstrap.Modal.getInstance(document.getElementById("deleteModal")).hide();
-  document.querySelector(`#projectsBody tr[data-id="${id}"]`)?.remove();   // hide immediately
-  Utils.undoToast({
-    message: "Project deleted.",
-    onUndo: () => loadProjects(),                                          // never deleted — restore view
-    onCommit: async () => {
-      try { await DataService.deleteProject(id); loadProjects(); }
-      catch (err) { Utils.toast("Failed to delete project: " + err.message, "error"); loadProjects(); }
-    }
-  });
-});
 
 /* ---------------- Excel / CSV Import ---------------- */
 const TEMPLATE_HEADERS = [
