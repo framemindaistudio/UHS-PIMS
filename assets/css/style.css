@@ -48,6 +48,7 @@
   --uhs-muted: #6E7B70;
   --uhs-border: #E7EDE2;
 
+  --uhs-topband: 96px;   /* shared height: topbar == sidebar header, so they align */
   --uhs-card-radius: 18px;
   --uhs-radius-sm: 10px;
   --uhs-shadow-sm: 0 2px 10px rgba(23, 61, 34, 0.06);
@@ -98,7 +99,7 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 }
 
 .uhs-sidebar {
-  width: 268px;
+  width: 288px;
   flex-shrink: 0;
   background:
     radial-gradient(circle at 20% -10%, rgba(76,175,80,0.35), transparent 55%),
@@ -113,16 +114,17 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 }
 
 .uhs-sidebar-brand {
-  padding: 2rem 1.25rem 1.6rem;
+  height: var(--uhs-topband);
+  padding: 0 1.4rem;
   display: flex;
   align-items: center;
-  gap: .9rem;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  gap: .95rem;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
 }
 
 .uhs-sidebar-brand .logo-circle {
-  width: 64px; height: 64px;
-  border-radius: 18px;
+  width: 72px; height: 72px;
+  border-radius: 20px;
   background: linear-gradient(135deg, var(--uhs-gold-400), var(--uhs-gold-600));
   box-shadow: 0 6px 16px rgba(200,145,44,0.4);
   display: flex; align-items: center; justify-content: center;
@@ -185,7 +187,7 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 }
 
 .uhs-main {
-  margin-left: 268px;
+  margin-left: 288px;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -193,11 +195,13 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 }
 
 .uhs-topbar {
-  background: rgba(255,255,255,0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(250,251,246,0.86));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--uhs-border);
-  padding: 1.4rem 2.5rem;
+  box-shadow: 0 8px 24px -18px rgba(23,61,34,0.35);
+  min-height: var(--uhs-topband);
+  padding: 0 2.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -542,7 +546,7 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
   }
   .uhs-sidebar-overlay.show { display: block; }
   .uhs-content { padding: 1.5rem; }
-  .uhs-topbar { padding: 1rem 1.25rem; }
+  .uhs-topbar { padding: 0 1.25rem; }
 }
 
 @media (max-width: 767px) {
@@ -986,7 +990,7 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 /* Bootstrap components that key off --bs-body-bg (dropdowns, list-groups, etc.) */
 [data-theme="dark"] { --bs-body-bg: #17201b; --bs-body-color: #E7EDE7; --bs-border-color: #29352c; }
 /* Topbar uses a translucent-white glass; make it a translucent-dark glass */
-[data-theme="dark"] .uhs-topbar { background: rgba(20,28,23,0.85); }
+[data-theme="dark"] .uhs-topbar { background: linear-gradient(180deg, rgba(24,33,27,0.92), rgba(18,26,21,0.82)); }
 [data-theme="dark"] .uhs-topbar h1 { color: var(--uhs-gold-400); }
 
 /* Funding hero gradient rebuilt for a dark surface */
