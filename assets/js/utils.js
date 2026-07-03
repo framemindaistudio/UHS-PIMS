@@ -290,6 +290,8 @@ const Theme = {
     const next = this.get() === "dark" ? "light" : "dark";
     try { localStorage.setItem(this.KEY, next); } catch (_) {}
     this.apply(next);
+    // Let canvas-based views (charts) know they must redraw — CSS can't recolour a canvas.
+    try { window.dispatchEvent(new CustomEvent("uhs:themechange", { detail: next })); } catch (_) {}
     return next;
   }
 };

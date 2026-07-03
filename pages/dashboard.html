@@ -259,19 +259,25 @@
       return;
     }
 
-    // ---- Chart theming ----
+    // ---- Chart theming (re-applied on theme toggle) ----
     let metric = "count";   // "count" | "cost"
-    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-    Chart.defaults.font.family = "'DM Sans', system-ui, sans-serif";
-    Chart.defaults.color = isDark ? "#C7D0C8" : "#666";
-    Chart.defaults.borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
-    const gridColor = isDark ? "rgba(255,255,255,0.08)" : "#EEF4EC";
+    const charts = {};
+    let isDark, gridColor, centreInk, centreSub;
     const ANIM = { duration: 900, easing: "easeOutQuart" };
     // Single-hue sequential fills per metric (green = projects, amber = funding)
     const HUE = {
       count: { line: "#2E8B45", stops: ["#4CAF50", "#226637"], soft: "rgba(52,168,83,0.14)", point: "#226637" },
       cost:  { line: "#C8912C", stops: ["#E8B34D", "#B07E14"], soft: "rgba(200,145,44,0.16)", point: "#9C6F12" }
     };
+    function applyTheme() {
+      isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      Chart.defaults.font.family = "'DM Sans', system-ui, sans-serif";
+      Chart.defaults.color = isDark ? "#C7D0C8" : "#5B6B60";
+      Chart.defaults.borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+      gridColor = isDark ? "rgba(255,255,255,0.08)" : "#EEF4EC";
+      centreInk = isDark ? "#E7EDE7" : "#123B1F";
+      centreSub = isDark ? "#9DA99F" : "#6E7B70";
+    }
     const grad = (canvas, horizontal) => {
       const ctx = canvas.getContext("2d");
       const g = horizontal ? ctx.createLinearGradient(0, 0, canvas.width || 600, 0)
@@ -293,40 +299,42 @@
         const cx = (chartArea.left + chartArea.right) / 2, cy = (chartArea.top + chartArea.bottom) / 2;
         ctx.save();
         ctx.textAlign = "center";
-        ctx.fillStyle = isDark ? "#E7EDE7" : "#123B1F";
-        ctx.font = "800 1.9rem 'DM Sans', sans-serif";
+        ctx.fillStyle = centreInk;
+        ctx.font = "800 30px 'DM Sans', sans-serif";
         ctx.fillText(stats.total, cx, cy);
-        ctx.fillStyle = isDark ? "#9DA99F" : "#6E7B70";
-        ctx.font = "600 .7rem 'DM Sans', sans-serif";
+        ctx.fillStyle = centreSub;
+        ctx.font = "600 11px 'DM Sans', sans-serif";
         ctx.fillText("PROJECTS", cx, cy + 18);
         ctx.restore();
       }
     };
-    new Chart(document.getElementById("statusChart"), {
-      type: "doughnut",
-      data: {
-        labels: statusLabels,
-        datasets: [{
-          data: Object.values(stats.byStatus),
-          backgroundColor: statusLabels.map(s => APP_CONFIG.statusColors[s] || "#2E8B45"),
-          borderColor: isDark ? "#172019" : "#fff",
-          borderWidth: 2,
-          hoverOffset: 8
-        }]
-      },
-      options: {
-        animation: ANIM,
-        cutout: "64%",
-        plugins: {
-          legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8, padding: 14 } },
-          tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed} (${Math.round(c.parsed / stats.total * 100)}%)` } }
-        }
-      },
-      plugins: [centreText]
-    });
+    function makeDoughnut() {
+      charts.status?.destroy();
+      charts.status = new Chart(document.getElementById("statusChart"), {
+        type: "doughnut",
+        data: {
+          labels: statusLabels,
+          datasets: [{
+            data: Object.values(stats.byStatus),
+            backgroundColor: statusLabels.map(s => APP_CONFIG.statusColors[s] || "#2E8B45"),
+            borderColor: isDark ? "#172019" : "#fff",
+            borderWidth: 2,
+            hoverOffset: 8
+          }]
+        },
+        options: {
+          animation: ANIM,
+          cutout: "64%",
+          plugins: {
+            legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8, padding: 14 } },
+            tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed} (${Math.round(c.parsed / stats.total * 100)}%)` } }
+          }
+        },
+        plugins: [centreText]
+      });
+    }
 
-    // ---- Metric-aware charts (agency / year / college / department) ----
-    const charts = {};
+    // ---- Metric-aware charts (funding type / year / college / department) ----
     function makeBar(key, canvasId, dataObj, horizontal, topN) {
       const entries = topN ? topEntries(dataObj, topN) : Object.entries(dataObj);
       const canvas = document.getElementById(canvasId);
@@ -377,7 +385,12 @@
       document.getElementById("collegeTitle").innerHTML = `${noun} by College <span class="text-muted fw-normal small">(top 8)</span>`;
       document.getElementById("deptTitle").innerHTML = `${noun} by Department <span class="text-muted fw-normal small">(top 8)</span>`;
     }
-    renderMetricCharts();
+    function buildCharts() {
+      applyTheme();
+      makeDoughnut();
+      renderMetricCharts();
+    }
+    buildCharts();
 
     function setMetric(m) {
       if (metric === m) return;
@@ -388,6 +401,9 @@
     }
     document.getElementById("metricCount").addEventListener("click", () => setMetric("count"));
     document.getElementById("metricCost").addEventListener("click", () => setMetric("cost"));
+
+    // A canvas can't recolour via CSS — rebuild the charts when the theme flips.
+    window.addEventListener("uhs:themechange", buildCharts);
 
     // Recent Projects table
     const tbody = document.getElementById("recentProjectsBody");
