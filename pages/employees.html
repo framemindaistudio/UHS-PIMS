@@ -54,17 +54,19 @@
           <table class="table table-uhs align-middle mb-0">
             <thead>
               <tr id="empHead">
+                <th class="uhs-sortable" data-col="emp_no" style="width:78px">No.</th>
                 <th class="uhs-sortable" data-col="name">Name</th>
                 <th>Designation</th>
                 <th>Discipline</th>
                 <th>College / Station</th>
                 <th class="uhs-sortable" data-col="retirement">Retirement</th>
                 <th>Status</th>
+                <th class="text-end">Projects</th>
                 <th class="text-end">Actions</th>
               </tr>
             </thead>
             <tbody id="tableBody">
-              <tr><td colspan="7" class="text-center text-muted py-4">Loading...</td></tr>
+              <tr><td colspan="9" class="text-center text-muted py-4">Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -87,6 +89,22 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body" id="vBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Projects (PI-wise) modal -->
+<div class="modal fade" id="projModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h6 class="modal-title fw-bold" id="pName"></h6>
+          <div class="text-muted small" id="pSub">Projects as Principal Investigator</div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="pBody"></div>
     </div>
   </div>
 </div>
@@ -169,8 +187,51 @@
 let editId = null;
 let collegesCache = [];
 let employees = [];
-let sortBy = "retirement";
+let allProjects = [];              // all projects, for PI-wise linking
+let projBySurname = new Map();     // surname -> [projects] (name-match index)
+let sortBy = "emp_no";
 let sortDir = "asc";
+
+// ---- PI name matching (conservative: surname must match, initials compatible) ----
+const NAME_HONORIFICS = new Set(["dr","prof","smt","sri","shri","mr","mrs","kum","km","miss","er","ms"]);
+function nameParts(raw) {
+  const toks = String(raw || "").toLowerCase().replace(/\./g, " ")
+    .split(/[^a-z]+/).filter(t => t && !NAME_HONORIFICS.has(t));
+  if (!toks.length) return null;
+  const words = toks.filter(t => t.length >= 3);
+  const surname = (words.length ? words : toks).slice().sort((a, b) => b.length - a.length)[0];
+  const initials = new Set();
+  toks.forEach(t => { if (t !== surname) initials.add(t[0]); });
+  return { surname, initials };
+}
+// Conservative: never link the wrong person.
+//  - both single-name (no initials) -> match on surname alone
+//  - one side abbreviated to a bare surname, the other has initials -> too ambiguous, skip
+//    (stops "Dr. Ashok" from matching both "Ashok Kumar" and "Ashok Alur")
+//  - both have initials -> the shorter set must be contained in the longer
+function initialsCompatible(a, b) {
+  if (a.size === 0 && b.size === 0) return true;
+  if (a.size === 0 || b.size === 0) return false;
+  const [small, big] = a.size <= b.size ? [a, b] : [b, a];
+  for (const x of small) if (!big.has(x)) return false;
+  return true;
+}
+function matchedProjects(emp) {
+  if (!emp._parts) emp._parts = nameParts(emp.name);
+  if (!emp._parts) return [];
+  const cands = projBySurname.get(emp._parts.surname) || [];
+  return cands.filter(p => p._parts && initialsCompatible(emp._parts.initials, p._parts.initials));
+}
+function buildProjectIndex() {
+  projBySurname = new Map();
+  allProjects.forEach(p => {
+    p._parts = nameParts(p.principal_investigator);
+    if (!p._parts) return;
+    if (!projBySurname.has(p._parts.surname)) projBySurname.set(p._parts.surname, []);
+    projBySurname.get(p._parts.surname).push(p);
+  });
+}
+function empNoLabel(e) { return e.emp_no ? String(e.emp_no).padStart(4, "0") : "—"; }
 
 // db column -> add/edit input id (single source of truth for the form)
 const FIELDS = {
@@ -243,7 +304,10 @@ function openView(id) {
     ["Asst. Professor (L12)", e.dt_asst_12], ["Associate Professor (L13A)", e.dt_assoc_13a],
     ["Professor (L14)", e.dt_prof_14], ["Professor (L15)", e.dt_prof_15]
   ];
+  const pc = matchedProjects(e).length;
+  const projBtn = `<div class="mb-3"><button class="btn btn-sm ${pc ? "btn-outline-success" : "btn-outline-secondary"}" onclick="closeViewThenProjects('${e.id}')"><i class="bi bi-folder2-open"></i> ${pc} project(s) as Principal Investigator</button></div>`;
   document.getElementById("vBody").innerHTML = `
+    ${projBtn}
     <div class="row g-3 mb-2">
       ${F("Designation", e.designation)}
       ${F("Academic Level", e.academic_level)}
@@ -264,6 +328,54 @@ function openView(id) {
       ${hist.map(([l, v]) => `<tr><td class="text-muted" style="width:55%">${l}</td><td class="fw-semibold">${Utils.escapeHtml(v == null || v === "" ? "—" : String(v))}</td></tr>`).join("")}
     </tbody></table></div>`;
   new bootstrap.Modal(document.getElementById("viewModal")).show();
+}
+
+// From the detail modal: fully close it, then open the projects modal (no stacking).
+function closeViewThenProjects(id) {
+  const el = document.getElementById("viewModal");
+  const m = bootstrap.Modal.getInstance(el);
+  if (m) { el.addEventListener("hidden.bs.modal", () => viewProjects(id), { once: true }); m.hide(); }
+  else viewProjects(id);
+}
+
+function viewProjects(id) {
+  const e = employees.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById("pName").textContent = `${empNoLabel(e)} · ${e.name}`;
+  const projs = matchedProjects(e);
+  const sub = document.getElementById("pSub");
+  const body = document.getElementById("pBody");
+  if (projs.length === 0) {
+    sub.textContent = "Projects as Principal Investigator";
+    body.innerHTML = `<div class="uhs-empty-state"><i class="bi bi-folder2-open"></i>
+      No projects found with this person as Principal Investigator.
+      <div class="text-muted small mt-1">If they use a different spelling on projects, it may not auto-match.</div></div>`;
+    new bootstrap.Modal(document.getElementById("projModal")).show();
+    return;
+  }
+  const total = projs.reduce((s, p) => s + Number(p.project_cost || 0), 0);
+  sub.textContent = `${projs.length} project(s) as Principal Investigator · ${Utils.formatCurrency ? Utils.formatCurrency(total) : "₹" + total.toLocaleString("en-IN")} total`;
+  const statusBadgeFor = (s) => {
+    const map = { Ongoing: "badge-ongoing", Completed: "badge-completed", Proposed: "badge-ongoing", Terminated: "badge-terminated" };
+    return `<span class="badge-status ${map[s] || "badge-ongoing"}">${Utils.escapeHtml(s || "—")}</span>`;
+  };
+  const rows = projs
+    .sort((a, b) => String(b.start_date || "").localeCompare(String(a.start_date || "")))
+    .map(p => {
+      const yr = p.start_date ? new Date(p.start_date).getFullYear() : "";
+      const cost = Number(p.project_cost || 0);
+      const meta = [p.college_name, p.department_name, yr].filter(Boolean).join(" · ");
+      return `<tr>
+        <td><div class="fw-semibold">${Utils.escapeHtml(p.title || "—")}</div>
+            <div class="text-muted small">${Utils.escapeHtml(meta || "—")}</div></td>
+        <td class="text-nowrap">${statusBadgeFor(p.status)}</td>
+        <td class="text-end text-nowrap">${cost ? (Utils.formatCurrency ? Utils.formatCurrency(cost) : "₹" + cost.toLocaleString("en-IN")) : "—"}</td>
+      </tr>`;
+    }).join("");
+  body.innerHTML = `<div class="table-responsive"><table class="table table-sm table-uhs align-middle mb-0">
+    <thead><tr><th>Project</th><th>Status</th><th class="text-end">Sanctioned</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+  new bootstrap.Modal(document.getElementById("projModal")).show();
 }
 
 function updateRetirementHint() {
@@ -288,23 +400,30 @@ function render() {
   const dir = sortDir === "asc" ? 1 : -1;
   rows.sort((a, b) => {
     if (sortBy === "retirement") return (retirementOf(a) - retirementOf(b)) * dir;
+    if (sortBy === "emp_no") return ((a.emp_no || 1e9) - (b.emp_no || 1e9)) * dir;
     return String(a[sortBy] || "").localeCompare(String(b[sortBy] || "")) * dir;
   });
 
   if (rows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="uhs-empty-state"><i class="bi bi-person-badge"></i>No employees ${q ? "match your search" : "added yet"}.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9"><div class="uhs-empty-state"><i class="bi bi-person-badge"></i>No employees ${q ? "match your search" : "added yet"}.</div></td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(e => {
     const rd = Utils.retirementDate(e.date_of_birth);
+    const pc = matchedProjects(e).length;
+    const projBtn = pc > 0
+      ? `<button class="btn btn-sm btn-outline-success" onclick="viewProjects('${e.id}')" title="View this PI's projects"><i class="bi bi-folder2-open"></i> ${pc}</button>`
+      : `<button class="btn btn-sm btn-outline-secondary text-muted" onclick="viewProjects('${e.id}')" title="No projects as PI"><i class="bi bi-folder2-open"></i> 0</button>`;
     return `
       <tr data-id="${e.id}">
+        <td class="fw-semibold text-muted">${empNoLabel(e)}</td>
         <td class="fw-semibold">${Utils.escapeHtml(e.name)}</td>
         <td>${Utils.escapeHtml(e.designation || "—")}</td>
         <td>${Utils.escapeHtml(e.discipline || "—")}</td>
         <td>${Utils.escapeHtml(e.college_name || e.place_of_working || "—")}</td>
         <td>${rd ? Utils.formatDate(rd) : "—"}</td>
         <td>${statusBadge(e)}</td>
+        <td class="text-end">${projBtn}</td>
         <td class="text-end">
           <button class="btn btn-sm btn-outline-secondary me-1" onclick="openView('${e.id}')" title="View details"><i class="bi bi-eye"></i></button>
           <button class="btn btn-sm btn-outline-secondary me-1 admin-only" onclick="openEditModal('${e.id}')" title="Edit"><i class="bi bi-pencil"></i></button>
@@ -359,15 +478,15 @@ function exportPdf() {
   doc.text(`Generated: ${new Date().toLocaleString("en-IN")}  |  Total: ${employees.length}  |  Retiring within 12 months: ${soon}`, 14, 31);
 
   // Sorted by nearest retirement — the printable register
-  const rows = [...employees].sort((a, b) => retirementOf(a) - retirementOf(b)).map((e, i) => [
-    i + 1, e.name, e.designation || "—", e.discipline || "—",
+  const rows = [...employees].sort((a, b) => retirementOf(a) - retirementOf(b)).map((e) => [
+    empNoLabel(e), e.name, e.designation || "—", e.discipline || "—",
     e.college_name || e.place_of_working || "—",
     Utils.formatDate(e.date_of_birth), (Utils.retirementDate(e.date_of_birth) ? Utils.formatDate(Utils.retirementDate(e.date_of_birth)) : "—"),
     statusText(e)
   ]);
   doc.autoTable({
     startY: 36,
-    head: [["#", "Name", "Designation", "Discipline", "College / Station", "Date of Birth", "Retirement", "Status"]],
+    head: [["Emp No", "Name", "Designation", "Discipline", "College / Station", "Date of Birth", "Retirement", "Status"]],
     body: rows,
     styles: { fontSize: 7, cellPadding: 1.5 },
     headStyles: { fillColor: [46, 125, 50] },
@@ -381,6 +500,7 @@ function exportExcel() {
   const rows = employees.map(e => {
     const rd = Utils.retirementDate(e.date_of_birth);
     return {
+      "Emp No": empNoLabel(e),
       "Name": e.name, "Designation": e.designation || "", "Academic Level": e.academic_level ?? "",
       "Discipline": e.discipline || "", "Present Position": e.present_position || "",
       "Working Office": e.working_office || "", "Place of Working": e.place_of_working || "",
@@ -405,11 +525,23 @@ async function loadColleges() {
     collegesCache.map(c => `<option value="${c.id}">${Utils.escapeHtml(c.name)}</option>`).join("");
 }
 
+// Best-effort load of all projects so we can link each PI to their projects.
+async function loadProjectsForLinking() {
+  try {
+    const { data } = await DataService.listProjects();   // all rows, no pagination
+    allProjects = data || [];
+    buildProjectIndex();
+  } catch (_) {
+    allProjects = []; projBySurname = new Map();
+  }
+}
+
 async function loadEmployees() {
   const tbody = document.getElementById("tableBody");
-  tbody.innerHTML = Utils.skeletonRows(7);
+  tbody.innerHTML = Utils.skeletonRows(9);
   try {
-    employees = await DataService.listEmployees();
+    const [emps] = await Promise.all([DataService.listEmployees(), loadProjectsForLinking()]);
+    employees = emps;
     // build discipline suggestions
     const disc = [...new Set(employees.map(e => e.discipline).filter(Boolean))].sort();
     document.getElementById("disciplineList").innerHTML = disc.map(d => `<option value="${Utils.escapeHtml(d)}">`).join("");
@@ -417,14 +549,14 @@ async function loadEmployees() {
     renderSummary();
   } catch (err) {
     const msg = (err.message || "").toLowerCase();
-    if (msg.includes("employees_view") || msg.includes("does not exist") || msg.includes("relation") || msg.includes("schema cache")) {
-      tbody.innerHTML = `<tr><td colspan="7" class="py-4">
+    if (msg.includes("employees_view") || msg.includes("does not exist") || msg.includes("relation") || msg.includes("schema cache") || msg.includes("emp_no")) {
+      tbody.innerHTML = `<tr><td colspan="9" class="py-4">
         <div class="uhs-empty-state">
           <i class="bi bi-database-gear"></i>
-          The Employees table isn't set up yet. Run <code>database/migration-v4-employees.sql</code> (and <code>migration-v6-employees-full.sql</code>) in the Supabase SQL Editor, then refresh.
+          The Employees table isn't fully set up yet. Run <code>database/migration-v4-employees.sql</code>, <code>migration-v6-employees-full.sql</code> and <code>migration-v8-employee-numbers.sql</code> in the Supabase SQL Editor, then refresh.
         </div></td></tr>`;
     } else {
-      tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${Utils.escapeHtml(err.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">${Utils.escapeHtml(err.message)}</td></tr>`;
     }
   }
 }
