@@ -239,6 +239,12 @@
       return;
     }
 
+    // Dark-mode aware chart colours (tick labels, legend text, grid lines)
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    Chart.defaults.color = isDark ? "#C7D0C8" : "#666";
+    Chart.defaults.borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.1)";
+    const gridColor = isDark ? "rgba(255,255,255,0.08)" : "#EEF4EC";
+
     // Status Chart
     const statusLabels = Object.keys(stats.byStatus);
     new Chart(document.getElementById("statusChart"), {
@@ -275,7 +281,7 @@
       options: {
         plugins: { legend: { display: false } },
         scales: {
-          y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: "#EEF4EC" } },
+          y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } },
           x: { grid: { display: false } }
         }
       }
@@ -301,7 +307,7 @@
       options: {
         plugins: { legend: { display: false } },
         scales: {
-          y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: "#EEF4EC" } },
+          y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } },
           x: { grid: { display: false } }
         }
       }
@@ -325,7 +331,7 @@
         indexAxis: "y",
         plugins: { legend: { display: false } },
         scales: {
-          x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: "#EEF4EC" } },
+          x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } },
           y: { grid: { display: false } }
         }
       }
@@ -361,7 +367,7 @@
           scales: {
             x: {
               beginAtZero: true,
-              grid: { color: "#EEF4EC" },
+              grid: { color: gridColor },
               ticks: { callback: (v) => Utils.formatCurrencyCompact(v) }
             },
             y: { grid: { display: false } }
