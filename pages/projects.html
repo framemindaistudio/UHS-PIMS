@@ -335,10 +335,19 @@ function wireRowSelection() {
   document.querySelectorAll(".row-select").forEach(cb => cb.addEventListener("change", updateBulkBar));
   updateBulkBar();
 }
-function bulkDelete() {
+async function bulkDelete() {
   const ids = selectedIds();
   if (!ids.length) return;
-  // One-click: hide the selected rows immediately; real delete deferred with Undo.
+  // Multi-delete is higher-stakes, so confirm first (single deletes are one-click).
+  const ok = await Utils.confirm({
+    title: `Delete ${ids.length} project(s)?`,
+    message: "The selected projects will be removed. You'll still have a few seconds to undo.",
+    confirmText: "Delete selected",
+    danger: true,
+    icon: "bi-trash"
+  });
+  if (!ok) return;
+  // Hide the selected rows immediately; real delete deferred with Undo.
   ids.forEach(id => document.querySelector(`#projectsBody tr[data-id="${id}"]`)?.remove());
   document.getElementById("bulkBar").classList.add("d-none");
   Utils.undoToast({
