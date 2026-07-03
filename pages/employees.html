@@ -182,6 +182,7 @@
 <script src="../components/footer.js"></script>
 <script src="../assets/js/utils.js"></script>
 <script src="../assets/js/data.js"></script>
+<script src="../assets/js/pi-aliases.js"></script>
 <script src="../components/onboarding.js"></script>
 <script>
 let editId = null;
@@ -216,11 +217,23 @@ function initialsCompatible(a, b) {
   for (const x of small) if (!big.has(x)) return false;
   return true;
 }
+function normPI(s) { return String(s || "").toLowerCase().replace(/\./g, " ").replace(/\s+/g, " ").trim(); }
 function matchedProjects(emp) {
   if (!emp._parts) emp._parts = nameParts(emp.name);
-  if (!emp._parts) return [];
-  const cands = projBySurname.get(emp._parts.surname) || [];
-  return cands.filter(p => p._parts && initialsCompatible(emp._parts.initials, p._parts.initials));
+  const out = new Set();
+  // 1) automatic match: same surname + compatible initials
+  if (emp._parts) {
+    (projBySurname.get(emp._parts.surname) || []).forEach(p => {
+      if (p._parts && initialsCompatible(emp._parts.initials, p._parts.initials)) out.add(p);
+    });
+  }
+  // 2) hand-verified spelling aliases (same person, different spelling on projects)
+  const aliases = (typeof PI_ALIASES !== "undefined" && PI_ALIASES[emp.name]) || [];
+  if (aliases.length) {
+    const want = new Set(aliases.map(normPI));
+    allProjects.forEach(p => { if (want.has(normPI(p.principal_investigator))) out.add(p); });
+  }
+  return [...out];
 }
 function buildProjectIndex() {
   projBySurname = new Map();
