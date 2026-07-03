@@ -299,7 +299,7 @@ async function loadProjects() {
     }
 
     tbody.innerHTML = projects.map(p => `
-      <tr>
+      <tr data-id="${p.id}">
         <td class="admin-only"><input type="checkbox" class="form-check-input row-select" value="${p.id}"></td>
         <td class="fw-semibold">${Utils.escapeHtml(p.title)}</td>
         <td>${Utils.escapeHtml(p.principal_investigator)}</td>
@@ -353,19 +353,23 @@ async function bulkDelete() {
   if (!ids.length) return;
   const ok = await Utils.confirm({
     title: `Delete ${ids.length} project(s)?`,
-    message: "The selected projects will be permanently removed. This cannot be undone.",
+    message: "The selected projects will be removed. You'll have a few seconds to undo.",
     confirmText: "Delete selected",
     danger: true,
     icon: "bi-trash"
   });
   if (!ok) return;
-  try {
-    await DataService.deleteProjectsBulk(ids);
-    Utils.toast(`${ids.length} project(s) deleted.`);
-    loadProjects();
-  } catch (err) {
-    Utils.toast("Failed to delete projects: " + err.message, "error");
-  }
+  // Hide the selected rows immediately; defer the real delete so it can be undone.
+  ids.forEach(id => document.querySelector(`#projectsBody tr[data-id="${id}"]`)?.remove());
+  document.getElementById("bulkBar").classList.add("d-none");
+  Utils.undoToast({
+    message: `${ids.length} project(s) deleted.`,
+    onUndo: () => loadProjects(),
+    onCommit: async () => {
+      try { await DataService.deleteProjectsBulk(ids); loadProjects(); }
+      catch (err) { Utils.toast("Failed to delete projects: " + err.message, "error"); loadProjects(); }
+    }
+  });
 }
 
 /* ---------------- Saved filter presets (localStorage) ---------------- */
@@ -412,16 +416,19 @@ function applyPreset(index) {
   applyFilters();
 }
 
-document.getElementById("confirmDeleteBtn").addEventListener("click", async () => {
+document.getElementById("confirmDeleteBtn").addEventListener("click", () => {
   if (!deleteTargetId) return;
-  try {
-    await DataService.deleteProject(deleteTargetId);
-    bootstrap.Modal.getInstance(document.getElementById("deleteModal")).hide();
-    Utils.toast("Project deleted successfully.");
-    loadProjects();
-  } catch (err) {
-    Utils.toast("Failed to delete project: " + err.message, "error");
-  }
+  const id = deleteTargetId;
+  bootstrap.Modal.getInstance(document.getElementById("deleteModal")).hide();
+  document.querySelector(`#projectsBody tr[data-id="${id}"]`)?.remove();   // hide immediately
+  Utils.undoToast({
+    message: "Project deleted.",
+    onUndo: () => loadProjects(),                                          // never deleted — restore view
+    onCommit: async () => {
+      try { await DataService.deleteProject(id); loadProjects(); }
+      catch (err) { Utils.toast("Failed to delete project: " + err.message, "error"); loadProjects(); }
+    }
+  });
 });
 
 /* ---------------- Excel / CSV Import ---------------- */

@@ -241,7 +241,7 @@ function render() {
   tbody.innerHTML = rows.map(e => {
     const rd = Utils.retirementDate(e.date_of_birth);
     return `
-      <tr>
+      <tr data-id="${e.id}">
         <td class="fw-semibold">${Utils.escapeHtml(e.name)}</td>
         <td>${Utils.escapeHtml(e.designation || "—")}</td>
         <td>${Utils.escapeHtml(e.college_name || "—")}</td>
@@ -323,16 +323,19 @@ document.getElementById("empForm").addEventListener("submit", async (e) => {
   }
 });
 
-document.getElementById("confirmDeleteBtn").addEventListener("click", async () => {
+document.getElementById("confirmDeleteBtn").addEventListener("click", () => {
   if (!deleteId) return;
-  try {
-    await DataService.deleteEmployee(deleteId);
-    bootstrap.Modal.getInstance(document.getElementById("deleteModal")).hide();
-    Utils.toast("Employee deleted.");
-    loadEmployees();
-  } catch (err) {
-    Utils.toast("Error: " + err.message, "error");
-  }
+  const id = deleteId;
+  bootstrap.Modal.getInstance(document.getElementById("deleteModal")).hide();
+  document.querySelector(`#tableBody tr[data-id="${id}"]`)?.remove();
+  Utils.undoToast({
+    message: "Employee deleted.",
+    onUndo: () => loadEmployees(),
+    onCommit: async () => {
+      try { await DataService.deleteEmployee(id); loadEmployees(); }
+      catch (err) { Utils.toast("Delete failed: " + err.message, "error"); loadEmployees(); }
+    }
+  });
 });
 
 (async () => {

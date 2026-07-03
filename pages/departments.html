@@ -146,7 +146,7 @@ async function loadDepartments() {
       return;
     }
     tbody.innerHTML = depts.map(d => `
-      <tr>
+      <tr data-id="${d.id}">
         <td class="fw-semibold">${Utils.escapeHtml(d.name)}</td>
         <td>${Utils.escapeHtml(d.colleges?.name || "—")}</td>
         <td class="text-end admin-only">
@@ -181,16 +181,19 @@ document.getElementById("deptForm").addEventListener("submit", async (e) => {
   }
 });
 
-document.getElementById("confirmDeleteBtn").addEventListener("click", async () => {
+document.getElementById("confirmDeleteBtn").addEventListener("click", () => {
   if (!deleteId) return;
-  try {
-    await DataService.deleteDepartment(deleteId);
-    bootstrap.Modal.getInstance(document.getElementById("deleteModal")).hide();
-    Utils.toast("Department deleted.");
-    loadDepartments();
-  } catch (err) {
-    Utils.toast("Error: " + err.message, "error");
-  }
+  const id = deleteId;
+  bootstrap.Modal.getInstance(document.getElementById("deleteModal")).hide();
+  document.querySelector(`#tableBody tr[data-id="${id}"]`)?.remove();
+  Utils.undoToast({
+    message: "Department deleted.",
+    onUndo: () => loadDepartments(),
+    onCommit: async () => {
+      try { await DataService.deleteDepartment(id); loadDepartments(); }
+      catch (err) { Utils.toast("Delete failed: " + err.message, "error"); loadDepartments(); }
+    }
+  });
 });
 
 (async () => {

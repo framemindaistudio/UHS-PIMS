@@ -556,6 +556,22 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 .uhs-toast-error   { background: linear-gradient(135deg, var(--uhs-terracotta-400), var(--uhs-rust-600)); }
 .uhs-toast-warning { background: linear-gradient(135deg, var(--uhs-gold-400), var(--uhs-gold-600)); }
 .uhs-toast .btn-close { filter: brightness(0) invert(1); opacity: .8; }
+.uhs-toast-undo { background: linear-gradient(135deg, #2b3a30, #17231b); }
+.uhs-undo-btn {
+  background: rgba(255,255,255,0.16);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.30);
+  border-radius: 8px;
+  padding: .28rem .7rem;
+  margin: 0 .75rem 0 .5rem;
+  font-weight: 600;
+  font-size: .8rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.uhs-undo-btn:hover { background: rgba(255,255,255,0.30); }
+.uhs-undo-count { opacity: .85; }
 .uhs-toast-progress {
   position: absolute;
   left: 0; bottom: 0;

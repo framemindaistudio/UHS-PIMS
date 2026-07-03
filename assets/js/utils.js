@@ -82,6 +82,49 @@ const Utils = {
   },
 
   /**
+   * "Deleted — Undo" toast with a live countdown. The real deletion is
+   * DEFERRED: onCommit() runs only when the timer expires; if the user hits
+   * Undo first, onUndo() runs instead and onCommit() never fires (nothing is
+   * ever actually deleted, so there is nothing to restore server-side).
+   */
+  undoToast({ message = "Deleted", seconds = 10, onCommit, onUndo } = {}) {
+    const containerId = "uhsToastContainer";
+    let container = document.getElementById(containerId);
+    if (!container) {
+      container = document.createElement("div");
+      container.id = containerId;
+      container.className = "toast-container position-fixed bottom-0 end-0 p-3";
+      container.style.zIndex = 1080;
+      document.body.appendChild(container);
+    }
+    let done = false, remaining = seconds;
+    const el = document.createElement("div");
+    el.className = "toast uhs-toast uhs-toast-undo show border-0";
+    el.setAttribute("role", "alert");
+    el.innerHTML = `
+      <div class="d-flex align-items-center">
+        <i class="bi bi-trash3 uhs-toast-icon"></i>
+        <div class="toast-body flex-grow-1">${this.escapeHtml(message)}</div>
+        <button type="button" class="uhs-undo-btn"><i class="bi bi-arrow-counterclockwise"></i> Undo <span class="uhs-undo-count">${seconds}</span></button>
+      </div>
+      <div class="uhs-toast-progress" style="animation-duration:${seconds * 1000}ms;"></div>`;
+    container.appendChild(el);
+
+    const finish = (fn) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      clearInterval(tick);
+      el.remove();
+      if (fn) Promise.resolve().then(fn).catch(e => console.error(e));
+    };
+    const timer = setTimeout(() => finish(onCommit), seconds * 1000);
+    const countEl = el.querySelector(".uhs-undo-count");
+    const tick = setInterval(() => { remaining -= 1; if (countEl) countEl.textContent = Math.max(0, remaining); }, 1000);
+    el.querySelector(".uhs-undo-btn").addEventListener("click", () => finish(onUndo));
+  },
+
+  /**
    * Promise-based styled confirmation dialog — replaces native confirm().
    * Resolves true if confirmed, false otherwise.
    */

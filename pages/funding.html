@@ -145,7 +145,7 @@ async function loadAgencies() {
       return;
     }
     tbody.innerHTML = agencies.map(a => `
-      <tr>
+      <tr data-id="${a.id}">
         <td class="fw-semibold">${Utils.escapeHtml(a.name)}</td>
         <td>${Utils.escapeHtml(a.agency_type || "—")}</td>
         <td class="text-end admin-only">
@@ -180,16 +180,19 @@ document.getElementById("agencyForm").addEventListener("submit", async (e) => {
   }
 });
 
-document.getElementById("confirmDeleteBtn").addEventListener("click", async () => {
+document.getElementById("confirmDeleteBtn").addEventListener("click", () => {
   if (!deleteId) return;
-  try {
-    await DataService.deleteFundingAgency(deleteId);
-    bootstrap.Modal.getInstance(document.getElementById("deleteModal")).hide();
-    Utils.toast("Funding agency deleted.");
-    loadAgencies();
-  } catch (err) {
-    Utils.toast("Error: " + err.message, "error");
-  }
+  const id = deleteId;
+  bootstrap.Modal.getInstance(document.getElementById("deleteModal")).hide();
+  document.querySelector(`#tableBody tr[data-id="${id}"]`)?.remove();   // hide immediately
+  Utils.undoToast({
+    message: "Funding agency deleted.",
+    onUndo: () => loadAgencies(),                                       // never deleted — just restore the view
+    onCommit: async () => {
+      try { await DataService.deleteFundingAgency(id); loadAgencies(); }
+      catch (err) { Utils.toast("Delete failed: " + err.message, "error"); loadAgencies(); }
+    }
+  });
 });
 
 (async () => {
