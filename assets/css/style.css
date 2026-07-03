@@ -113,16 +113,16 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 }
 
 .uhs-sidebar-brand {
-  padding: 2rem 1.5rem 1.5rem;
+  padding: 2rem 1.25rem 1.6rem;
   display: flex;
   align-items: center;
-  gap: .8rem;
+  gap: .9rem;
   border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .uhs-sidebar-brand .logo-circle {
-  width: 44px; height: 44px;
-  border-radius: 14px;
+  width: 64px; height: 64px;
+  border-radius: 18px;
   background: linear-gradient(135deg, var(--uhs-gold-400), var(--uhs-gold-600));
   box-shadow: 0 6px 16px rgba(200,145,44,0.4);
   display: flex; align-items: center; justify-content: center;
@@ -132,9 +132,20 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
   flex-shrink: 0;
 }
 
-.uhs-sidebar-brand .brand-text { line-height: 1.15; }
-.uhs-sidebar-brand .brand-text .b1 { font-weight: 800; font-size: 1.1rem; letter-spacing: -.01em; }
-.uhs-sidebar-brand .brand-text .b2 { font-size: .7rem; opacity: .7; }
+.uhs-sidebar-brand .brand-text { line-height: 1.2; }
+.uhs-sidebar-brand .brand-text .b1 {
+  font-weight: 800;
+  font-size: 1.55rem;
+  letter-spacing: -.01em;
+  color: var(--uhs-gold-400);
+}
+.uhs-sidebar-brand .brand-text .b2 {
+  font-size: .9rem;
+  font-weight: 600;
+  opacity: .92;
+  letter-spacing: .01em;
+  margin-top: .1rem;
+}
 
 .uhs-nav { padding: 1.5rem 1rem; flex: 1; overflow-y: auto; }
 
@@ -196,10 +207,11 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 }
 
 .uhs-topbar h1 {
-  font-size: 1.4rem;
+  font-size: clamp(1.5rem, 2.4vw, 1.95rem);
   font-weight: 800;
   margin: 0;
   color: var(--uhs-gold-600);
+  letter-spacing: -.01em;
 }
 
 
