@@ -18,10 +18,7 @@ async function renderTopbar(title) {
         <button class="uhs-sidebar-toggle" onclick="toggleSidebar()">
           <i class="bi bi-list"></i>
         </button>
-        <div class="uhs-topbar-titles">
-          <h1>${title}</h1>
-          <div class="uhs-topbar-univ">${university}</div>
-        </div>
+        <h1>${university}</h1>
       </div>
       <div class="d-flex align-items-center gap-2">
         <button class="uhs-theme-toggle" id="uhsThemeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">

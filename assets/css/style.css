@@ -202,14 +202,6 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
   color: var(--uhs-primary-dark);
 }
 
-.uhs-topbar-titles { line-height: 1.2; }
-.uhs-topbar-univ {
-  font-size: .78rem;
-  font-weight: 600;
-  color: var(--uhs-gold-600);
-  margin-top: .12rem;
-  letter-spacing: .01em;
-}
 
 .uhs-content {
   padding: 2.75rem;
@@ -983,7 +975,6 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 [data-theme="dark"] { --bs-body-bg: #17201b; --bs-body-color: #E7EDE7; --bs-border-color: #29352c; }
 /* Topbar uses a translucent-white glass; make it a translucent-dark glass */
 [data-theme="dark"] .uhs-topbar { background: rgba(20,28,23,0.85); }
-[data-theme="dark"] .uhs-topbar-univ { color: var(--uhs-gold-400, #E8B34D); }
 
 /* Funding hero gradient rebuilt for a dark surface */
 [data-theme="dark"] .uhs-funding-hero {
