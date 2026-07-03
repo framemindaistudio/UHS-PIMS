@@ -40,7 +40,7 @@
         </div>
         <div class="fh-side">
           <div class="fh-mini"><div class="m-val" id="heroActive">—</div><div class="m-lab">Active projects</div></div>
-          <div class="fh-mini"><div class="m-val" id="heroAgencies">—</div><div class="m-lab">Funding agencies</div></div>
+          <div class="fh-mini"><div class="m-val" id="heroColleges">—</div><div class="m-lab">Colleges</div></div>
         </div>
       </div>
 
@@ -80,8 +80,18 @@
 
       <!-- Data view (charts + recent) -->
       <div id="dashboardData">
+
+        <!-- Metric toggle -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+          <div class="text-muted small"><i class="bi bi-bar-chart-line"></i> Break the charts down by</div>
+          <div class="uhs-metric-toggle" role="group" aria-label="Chart metric">
+            <button type="button" class="active" id="metricCount" data-metric="count"><i class="bi bi-hash"></i> Projects</button>
+            <button type="button" id="metricCost" data-metric="cost"><i class="bi bi-currency-rupee"></i> Funding</button>
+          </div>
+        </div>
+
         <!-- Charts -->
-        <div class="row g-4 mb-5">
+        <div class="row g-4 mb-4">
           <div class="col-lg-6">
             <div class="uhs-card p-4 h-100">
               <h6 class="fw-bold mb-3">Project Status Distribution</h6>
@@ -90,33 +100,33 @@
           </div>
           <div class="col-lg-6">
             <div class="uhs-card p-4 h-100">
-              <h6 class="fw-bold mb-3">Funding Agency Distribution</h6>
+              <h6 class="fw-bold mb-3" id="agencyTitle">Projects by Funding Type</h6>
               <canvas id="agencyChart" height="220"></canvas>
             </div>
           </div>
         </div>
 
         <!-- More charts: year-wise trend + college-wise -->
-        <div class="row g-4 mb-5">
+        <div class="row g-4 mb-4">
           <div class="col-lg-6">
             <div class="uhs-card p-4 h-100">
-              <h6 class="fw-bold mb-3">Projects by Year</h6>
+              <h6 class="fw-bold mb-3" id="yearTitle">Projects by Start Year</h6>
               <canvas id="yearChart" height="220"></canvas>
             </div>
           </div>
           <div class="col-lg-6">
             <div class="uhs-card p-4 h-100">
-              <h6 class="fw-bold mb-3">Projects by College</h6>
+              <h6 class="fw-bold mb-3" id="collegeTitle">Projects by College <span class="text-muted fw-normal small">(top 8)</span></h6>
               <canvas id="collegeChart" height="220"></canvas>
             </div>
           </div>
         </div>
 
-        <!-- Sanctioned cost by department -->
+        <!-- By department -->
         <div class="row g-4 mb-5">
           <div class="col-12">
             <div class="uhs-card p-4">
-              <h6 class="fw-bold mb-3">Sanctioned Funding by Department <span class="text-muted fw-normal small">(top 8)</span></h6>
+              <h6 class="fw-bold mb-3" id="deptTitle">Projects by Department <span class="text-muted fw-normal small">(top 8)</span></h6>
               <canvas id="deptCostChart" height="120"></canvas>
             </div>
           </div>
@@ -221,16 +231,26 @@
   try {
     const stats = await DataService.getDashboardStats();
 
-    document.getElementById("statTotal").textContent = stats.total;
-    document.getElementById("statOngoing").textContent = stats.ongoing;
-    document.getElementById("statCompleted").textContent = stats.completed;
-    document.getElementById("statUniversity").textContent = stats.universityFunded;
-    document.getElementById("statExternal").textContent = stats.externalFunded;
-
-    // Funding hero
-    document.getElementById("heroFunding").textContent = Utils.formatCurrencyCompact(stats.totalFunding);
-    document.getElementById("heroActive").textContent = stats.ongoing;
-    document.getElementById("heroAgencies").textContent = Object.keys(stats.byAgency).filter(a => a !== "Unspecified").length;
+    // Animated count-up for the stat cards + funding hero
+    const countUp = (el, to, fmt) => {
+      if (!el) return;
+      const dur = 900, start = performance.now();
+      const f = fmt || (n => Math.round(n).toLocaleString("en-IN"));
+      const step = (now) => {
+        const t = Math.min(1, (now - start) / dur);
+        el.textContent = f(to * (1 - Math.pow(1 - t, 3)));   // easeOutCubic
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    };
+    countUp(document.getElementById("statTotal"), stats.total);
+    countUp(document.getElementById("statOngoing"), stats.ongoing);
+    countUp(document.getElementById("statCompleted"), stats.completed);
+    countUp(document.getElementById("statUniversity"), stats.universityFunded);
+    countUp(document.getElementById("statExternal"), stats.externalFunded);
+    countUp(document.getElementById("heroFunding"), stats.totalFunding, (n) => Utils.formatCurrencyCompact(n));
+    countUp(document.getElementById("heroActive"), stats.ongoing);
+    document.getElementById("heroColleges").textContent = Object.keys(stats.byCollege).filter(c => c !== "Unspecified").length;
 
     // No data yet → show onboarding, skip charts
     if (stats.total === 0) {
@@ -239,14 +259,49 @@
       return;
     }
 
-    // Dark-mode aware chart colours (tick labels, legend text, grid lines)
+    // ---- Chart theming ----
+    let metric = "count";   // "count" | "cost"
     const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    Chart.defaults.font.family = "'DM Sans', system-ui, sans-serif";
     Chart.defaults.color = isDark ? "#C7D0C8" : "#666";
-    Chart.defaults.borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.1)";
+    Chart.defaults.borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
     const gridColor = isDark ? "rgba(255,255,255,0.08)" : "#EEF4EC";
+    const ANIM = { duration: 900, easing: "easeOutQuart" };
+    // Single-hue sequential fills per metric (green = projects, amber = funding)
+    const HUE = {
+      count: { line: "#2E8B45", stops: ["#4CAF50", "#226637"], soft: "rgba(52,168,83,0.14)", point: "#226637" },
+      cost:  { line: "#C8912C", stops: ["#E8B34D", "#B07E14"], soft: "rgba(200,145,44,0.16)", point: "#9C6F12" }
+    };
+    const grad = (canvas, horizontal) => {
+      const ctx = canvas.getContext("2d");
+      const g = horizontal ? ctx.createLinearGradient(0, 0, canvas.width || 600, 0)
+                           : ctx.createLinearGradient(0, 0, 0, canvas.height || 220);
+      g.addColorStop(0, HUE[metric].stops[0]);
+      g.addColorStop(1, HUE[metric].stops[1]);
+      return g;
+    };
+    const fmtMetric = (v) => metric === "cost" ? Utils.formatCurrencyCompact(v) : Math.round(v).toLocaleString("en-IN");
+    // Ranked bars: drop the "Unspecified" bucket so charts focus on classified data.
+    const topEntries = (obj, n) => Object.entries(obj).filter(([k, v]) => v > 0 && k !== "Unspecified").sort((a, b) => b[1] - a[1]).slice(0, n || 999);
 
-    // Status Chart
+    // ---- Status doughnut (always project count) with centre total ----
     const statusLabels = Object.keys(stats.byStatus);
+    const centreText = {
+      id: "centreText",
+      afterDraw(chart) {
+        const { ctx, chartArea } = chart;
+        const cx = (chartArea.left + chartArea.right) / 2, cy = (chartArea.top + chartArea.bottom) / 2;
+        ctx.save();
+        ctx.textAlign = "center";
+        ctx.fillStyle = isDark ? "#E7EDE7" : "#123B1F";
+        ctx.font = "800 1.9rem 'DM Sans', sans-serif";
+        ctx.fillText(stats.total, cx, cy);
+        ctx.fillStyle = isDark ? "#9DA99F" : "#6E7B70";
+        ctx.font = "600 .7rem 'DM Sans', sans-serif";
+        ctx.fillText("PROJECTS", cx, cy + 18);
+        ctx.restore();
+      }
+    };
     new Chart(document.getElementById("statusChart"), {
       type: "doughnut",
       data: {
@@ -254,127 +309,85 @@
         datasets: [{
           data: Object.values(stats.byStatus),
           backgroundColor: statusLabels.map(s => APP_CONFIG.statusColors[s] || "#2E8B45"),
-          borderWidth: 0,
-          hoverOffset: 6
-        }]
-      },
-      options: { plugins: { legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8 } } }, responsive: true, cutout: "62%" }
-    });
-
-    // Agency Chart
-    const agencyLabels = Object.keys(stats.byAgency);
-    const agencyGradient = document.getElementById("agencyChart").getContext("2d").createLinearGradient(0, 0, 0, 220);
-    agencyGradient.addColorStop(0, "#4CAF50");
-    agencyGradient.addColorStop(1, "#226637");
-    new Chart(document.getElementById("agencyChart"), {
-      type: "bar",
-      data: {
-        labels: agencyLabels,
-        datasets: [{
-          label: "Projects",
-          data: Object.values(stats.byAgency),
-          backgroundColor: agencyGradient,
-          borderRadius: 8,
-          maxBarThickness: 42
+          borderColor: isDark ? "#172019" : "#fff",
+          borderWidth: 2,
+          hoverOffset: 8
         }]
       },
       options: {
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } },
-          x: { grid: { display: false } }
+        animation: ANIM,
+        cutout: "64%",
+        plugins: {
+          legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8, padding: 14 } },
+          tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed} (${Math.round(c.parsed / stats.total * 100)}%)` } }
         }
-      }
-    });
-
-    // Year-wise trend (line)
-    const years = Object.keys(stats.byYear).sort();
-    new Chart(document.getElementById("yearChart"), {
-      type: "line",
-      data: {
-        labels: years,
-        datasets: [{
-          label: "Projects started",
-          data: years.map(y => stats.byYear[y]),
-          borderColor: "#2E8B45",
-          backgroundColor: "rgba(52,168,83,0.12)",
-          fill: true,
-          tension: 0.35,
-          pointBackgroundColor: "#226637",
-          pointRadius: 4
-        }]
       },
-      options: {
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } },
-          x: { grid: { display: false } }
-        }
-      }
+      plugins: [centreText]
     });
 
-    // College-wise (horizontal bar)
-    const collegeLabels = Object.keys(stats.byCollege);
-    new Chart(document.getElementById("collegeChart"), {
-      type: "bar",
-      data: {
-        labels: collegeLabels,
-        datasets: [{
-          label: "Projects",
-          data: Object.values(stats.byCollege),
-          backgroundColor: "#E8B34D",
-          borderRadius: 8,
-          maxBarThickness: 34
-        }]
-      },
-      options: {
-        indexAxis: "y",
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } },
-          y: { grid: { display: false } }
-        }
-      }
-    });
-
-    // Sanctioned cost by department (top 8, horizontal bar)
-    const deptCostEntries = Object.entries(stats.byDeptCost)
-      .filter(([, v]) => v > 0)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8);
-    if (deptCostEntries.length) {
-      const costGradient = document.getElementById("deptCostChart").getContext("2d").createLinearGradient(0, 0, 600, 0);
-      costGradient.addColorStop(0, "#34A853");
-      costGradient.addColorStop(1, "#C8912C");
-      new Chart(document.getElementById("deptCostChart"), {
+    // ---- Metric-aware charts (agency / year / college / department) ----
+    const charts = {};
+    function makeBar(key, canvasId, dataObj, horizontal, topN) {
+      const entries = topN ? topEntries(dataObj, topN) : Object.entries(dataObj);
+      const canvas = document.getElementById(canvasId);
+      charts[key]?.destroy();
+      charts[key] = new Chart(canvas, {
         type: "bar",
         data: {
-          labels: deptCostEntries.map(e => e[0]),
-          datasets: [{
-            label: "Sanctioned cost",
-            data: deptCostEntries.map(e => e[1]),
-            backgroundColor: costGradient,
-            borderRadius: 8,
-            maxBarThickness: 30
-          }]
+          labels: entries.map(e => e[0]),
+          datasets: [{ data: entries.map(e => e[1]), backgroundColor: grad(canvas, horizontal), borderRadius: 6, borderSkipped: false, maxBarThickness: horizontal ? 30 : 42 }]
         },
         options: {
-          indexAxis: "y",
-          plugins: {
-            legend: { display: false },
-            tooltip: { callbacks: { label: (ctx) => Utils.formatCurrencyCompact(ctx.parsed.x) } }
-          },
-          scales: {
-            x: {
-              beginAtZero: true,
-              grid: { color: gridColor },
-              ticks: { callback: (v) => Utils.formatCurrencyCompact(v) }
-            },
-            y: { grid: { display: false } }
-          }
+          indexAxis: horizontal ? "y" : "x",
+          animation: ANIM,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => " " + fmtMetric(horizontal ? c.parsed.x : c.parsed.y) } } },
+          scales: horizontal
+            ? { x: { beginAtZero: true, grid: { color: gridColor }, ticks: { callback: fmtMetric } }, y: { grid: { display: false } } }
+            : { y: { beginAtZero: true, grid: { color: gridColor }, ticks: { callback: fmtMetric } }, x: { grid: { display: false } } }
         }
       });
     }
+    function makeYear(dataObj) {
+      const years = Object.keys(dataObj).sort();
+      charts.year?.destroy();
+      charts.year = new Chart(document.getElementById("yearChart"), {
+        type: "line",
+        data: {
+          labels: years,
+          datasets: [{ data: years.map(y => dataObj[y]), borderColor: HUE[metric].line, backgroundColor: HUE[metric].soft, borderWidth: 2, fill: true, tension: 0.35, pointBackgroundColor: HUE[metric].point, pointRadius: 4, pointHoverRadius: 6 }]
+        },
+        options: {
+          animation: ANIM,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => " " + fmtMetric(c.parsed.y) } } },
+          scales: { y: { beginAtZero: true, grid: { color: gridColor }, ticks: { callback: fmtMetric } }, x: { grid: { display: false } } }
+        }
+      });
+    }
+    function renderMetricCharts() {
+      const src = metric === "cost"
+        ? { ftype: stats.byFundingTypeCost, year: stats.byYearCost, college: stats.byCollegeCost, dept: stats.byDeptCost }
+        : { ftype: stats.byFundingType,     year: stats.byYear,     college: stats.byCollege,     dept: stats.byDept };
+      makeBar("ftype", "agencyChart", src.ftype, false, 0);
+      makeYear(src.year);
+      makeBar("college", "collegeChart", src.college, true, 8);
+      makeBar("dept", "deptCostChart", src.dept, true, 8);
+      const noun = metric === "cost" ? "Funding" : "Projects";
+      document.getElementById("agencyTitle").textContent = metric === "cost" ? "Sanctioned Funding by Type" : "Projects by Funding Type";
+      document.getElementById("yearTitle").textContent = `${noun} by Start Year`;
+      document.getElementById("collegeTitle").innerHTML = `${noun} by College <span class="text-muted fw-normal small">(top 8)</span>`;
+      document.getElementById("deptTitle").innerHTML = `${noun} by Department <span class="text-muted fw-normal small">(top 8)</span>`;
+    }
+    renderMetricCharts();
+
+    function setMetric(m) {
+      if (metric === m) return;
+      metric = m;
+      document.getElementById("metricCount").classList.toggle("active", m === "count");
+      document.getElementById("metricCost").classList.toggle("active", m === "cost");
+      renderMetricCharts();
+    }
+    document.getElementById("metricCount").addEventListener("click", () => setMetric("count"));
+    document.getElementById("metricCost").addEventListener("click", () => setMetric("cost"));
 
     // Recent Projects table
     const tbody = document.getElementById("recentProjectsBody");

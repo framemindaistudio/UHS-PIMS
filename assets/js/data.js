@@ -196,25 +196,37 @@ const DataService = {
       externalFunded: data.filter(p => p.funding_type === "External Funded").length,
       totalFunding: data.reduce((sum, p) => sum + Number(p.project_cost || 0), 0),
       byStatus: {},
-      byAgency: {},
-      byYear: {},
-      byCollege: {},
-      byDeptCost: {},
+      byFundingType: {}, byFundingTypeCost: {},
+      byAgency: {},      byAgencyCost: {},
+      byYear: {},        byYearCost: {},
+      byCollege: {},     byCollegeCost: {},
+      byDept: {},        byDeptCost: {},
       recent: [...data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5)
     };
 
     data.forEach(p => {
+      const cost = Number(p.project_cost || 0);
       stats.byStatus[p.status] = (stats.byStatus[p.status] || 0) + 1;
+      if (p.funding_type) {
+        stats.byFundingType[p.funding_type] = (stats.byFundingType[p.funding_type] || 0) + 1;
+        stats.byFundingTypeCost[p.funding_type] = (stats.byFundingTypeCost[p.funding_type] || 0) + cost;
+      }
       const agency = p.funding_agency_name || "Unspecified";
       stats.byAgency[agency] = (stats.byAgency[agency] || 0) + 1;
+      stats.byAgencyCost[agency] = (stats.byAgencyCost[agency] || 0) + cost;
       if (p.start_date) {
         const yr = new Date(p.start_date).getFullYear();
-        if (!Number.isNaN(yr)) stats.byYear[yr] = (stats.byYear[yr] || 0) + 1;
+        if (!Number.isNaN(yr)) {
+          stats.byYear[yr] = (stats.byYear[yr] || 0) + 1;
+          stats.byYearCost[yr] = (stats.byYearCost[yr] || 0) + cost;
+        }
       }
       const college = p.college_name || "Unspecified";
       stats.byCollege[college] = (stats.byCollege[college] || 0) + 1;
+      stats.byCollegeCost[college] = (stats.byCollegeCost[college] || 0) + cost;
       const dept = p.department_name || "Unspecified";
-      stats.byDeptCost[dept] = (stats.byDeptCost[dept] || 0) + Number(p.project_cost || 0);
+      stats.byDept[dept] = (stats.byDept[dept] || 0) + 1;
+      stats.byDeptCost[dept] = (stats.byDeptCost[dept] || 0) + cost;
     });
 
     return stats;

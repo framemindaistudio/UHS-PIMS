@@ -875,6 +875,37 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 }
 .uhs-theme-toggle:hover { color: var(--uhs-green-600); border-color: var(--uhs-green-400); }
 
+/* ---------- Dashboard metric toggle (segmented control) ---------- */
+.uhs-metric-toggle {
+  display: inline-flex;
+  background: var(--uhs-green-50);
+  border: 1px solid var(--uhs-border);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 2px;
+}
+.uhs-metric-toggle button {
+  border: none;
+  background: transparent;
+  color: var(--uhs-muted);
+  font-weight: 600;
+  font-size: .85rem;
+  padding: .4rem .9rem;
+  border-radius: 9px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+.uhs-metric-toggle button.active {
+  background: var(--uhs-surface);
+  color: var(--uhs-green-700);
+  box-shadow: var(--uhs-shadow-sm);
+}
+.uhs-metric-toggle button:hover:not(.active) { color: var(--uhs-text); }
+[data-theme="dark"] .uhs-metric-toggle button.active { color: var(--uhs-green-400); }
+
 /* ============================================================
    Dark mode — opt-in via [data-theme="dark"] on <html>.
    Default (light) theme above is untouched by this block.

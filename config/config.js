@@ -34,9 +34,10 @@ const APP_CONFIG = {
     { value: "25-36", label: "2–3 years" },
     { value: "37+", label: "Over 3 years" }
   ],
+  // Validated (light + dark, CVD-safe) status palette for charts.
   statusColors: {
     Ongoing: "#2E8B45",
-    Completed: "#C8912C",
+    Completed: "#9C6F12",
     Proposed: "#1D77A6",
     Terminated: "#B4472A"
   }
