@@ -914,10 +914,28 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 [data-theme="dark"] .form-select {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%239DA99F' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
 }
-[data-theme="dark"] .table { --bs-table-color: var(--uhs-text); color: var(--uhs-text); }
+/* Tables: Bootstrap's --bs-table-bg falls back to white — make cells transparent
+   so the dark card shows through, and lighten text/borders. */
+[data-theme="dark"] .table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--uhs-text);
+  --bs-table-border-color: var(--uhs-border);
+  color: var(--uhs-text);
+}
+/* Utility/white surfaces (search icon box, etc.) */
+[data-theme="dark"] .bg-white { background-color: var(--uhs-surface) !important; }
+[data-theme="dark"] .input-group-text {
+  background-color: #1E2822;
+  border-color: var(--uhs-border);
+  color: var(--uhs-muted);
+}
 [data-theme="dark"] .btn-outline-secondary { color: var(--uhs-muted); border-color: var(--uhs-border); }
 [data-theme="dark"] .btn-outline-secondary:hover { background: var(--uhs-green-50); color: var(--uhs-text); }
 [data-theme="dark"] .text-muted { color: var(--uhs-muted) !important; }
+/* Bootstrap components that key off --bs-body-bg (dropdowns, list-groups, etc.) */
+[data-theme="dark"] { --bs-body-bg: #17201b; --bs-body-color: #E7EDE7; --bs-border-color: #29352c; }
+/* Topbar uses a translucent-white glass; make it a translucent-dark glass */
+[data-theme="dark"] .uhs-topbar { background: rgba(20,28,23,0.85); }
 
 /* Funding hero gradient rebuilt for a dark surface */
 [data-theme="dark"] .uhs-funding-hero {
