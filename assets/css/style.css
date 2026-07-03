@@ -891,15 +891,22 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
   --uhs-shadow-lg: 0 24px 60px rgba(0,0,0,0.55);
 }
 
-/* Headings coloured with the dark-green ink token turn light in dark mode
+/* Headings/text coloured with the dark-green ink token turn light in dark mode
    (that token is also the sidebar background, so it can't be flipped globally) */
 [data-theme="dark"] .stat-card .stat-value,
 [data-theme="dark"] .uhs-welcome h2,
 [data-theme="dark"] .uhs-funding-hero .fh-value,
+[data-theme="dark"] .uhs-funding-hero .fh-mini .m-val,
+[data-theme="dark"] .uhs-topbar h1,
+[data-theme="dark"] .uhs-sidebar-toggle,
 [data-theme="dark"] .uhs-onboarding h4,
 [data-theme="dark"] .uhs-onboard-body h4,
 [data-theme="dark"] .uhs-form-section-head h6,
 [data-theme="dark"] .table-uhs thead th { color: #E7EDE7; }
+/* Green accent labels: dark-green is invisible on dark — use a lighter green */
+[data-theme="dark"] .uhs-funding-hero .fh-label,
+[data-theme="dark"] .uhs-welcome-date,
+[data-theme="dark"] .uhs-bulk-bar strong { color: var(--uhs-green-400); }
 
 /* Bootstrap surfaces that hardcode white */
 [data-theme="dark"] .login-card { background: var(--uhs-surface); }
