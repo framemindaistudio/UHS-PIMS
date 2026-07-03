@@ -9,6 +9,7 @@ const SIDEBAR_LINKS = [
   { key: "departments",label: "Departments",       icon: "bi-diagram-3",     href: "departments.html" },
   { key: "colleges",   label: "Colleges",          icon: "bi-bank2",         href: "colleges.html" },
   { key: "funding",    label: "Funding Agencies",  icon: "bi-cash-coin",     href: "funding.html" },
+  { key: "employees",  label: "Employees",         icon: "bi-person-badge",  href: "employees.html" },
   { key: "reports",    label: "Reports",           icon: "bi-file-earmark-bar-graph", href: "reports.html" },
   { key: "users",      label: "Users",             icon: "bi-people",        href: "users.html", adminOnly: true },
   { key: "profile",    label: "Profile",           icon: "bi-person-circle", href: "profile.html" },

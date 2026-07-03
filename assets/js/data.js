@@ -164,6 +164,25 @@ const DataService = {
     return data;
   },
 
+  // ---------------- Employees (retirement tracking) ----------------
+  async listEmployees() {
+    const { data, error } = await supabaseClient.from("employees_view").select("*").order("name");
+    if (error) throw error;
+    return data;
+  },
+  async addEmployee(payload) {
+    const { error } = await supabaseClient.from("employees").insert(payload);
+    if (error) throw error;
+  },
+  async updateEmployee(id, payload) {
+    const { error } = await supabaseClient.from("employees").update(payload).eq("id", id);
+    if (error) throw error;
+  },
+  async deleteEmployee(id) {
+    const { error } = await supabaseClient.from("employees").delete().eq("id", id);
+    if (error) throw error;
+  },
+
   // ---------------- Dashboard Stats ----------------
   async getDashboardStats() {
     const { data, error } = await supabaseClient.from("projects_view").select("*");

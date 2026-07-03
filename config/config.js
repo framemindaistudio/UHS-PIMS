@@ -14,6 +14,8 @@ const APP_CONFIG = {
   },
   fundingTypes: ["University Funded", "External Funded"],
   statusOptions: ["Ongoing", "Completed", "Proposed", "Terminated"],
+  // Superannuation age — retirement date = date of birth + this many years.
+  retirementAge: 62,
   designationOptions: [
     "Professor & Head",
     "Professor",

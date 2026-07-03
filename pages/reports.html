@@ -25,7 +25,7 @@
 
       <div class="mb-3">
         <h5 class="fw-bold mb-0">Reports</h5>
-        <p class="text-muted small mb-0">Generate year-wise, department-wise, college-wise, agency-wise and status reports</p>
+        <p class="text-muted small mb-0">Generate year-wise, department-wise, college-wise, designation-wise, PI-wise and status reports</p>
       </div>
 
       <!-- Filters -->
@@ -63,6 +63,12 @@
         <div id="filterChips" class="uhs-chips mt-3 d-none"></div>
       </div>
 
+      <!-- View toggle: detailed vs. grouped by PI -->
+      <div class="btn-group btn-group-sm mb-3" role="group" aria-label="Report view">
+        <button type="button" class="btn btn-uhs-primary" id="modeDetail" data-mode="detail"><i class="bi bi-list-ul"></i> Detailed</button>
+        <button type="button" class="btn btn-outline-secondary" id="modePi" data-mode="pi"><i class="bi bi-person-lines-fill"></i> By PI</button>
+      </div>
+
       <!-- Summary + Export -->
       <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div id="reportSummary" class="text-muted small"></div>
@@ -72,8 +78,8 @@
         </div>
       </div>
 
-      <!-- Table -->
-      <div class="uhs-card p-3">
+      <!-- Detailed table -->
+      <div class="uhs-card p-3" id="detailReport">
         <div class="table-responsive" id="reportTableWrap">
           <table class="table table-uhs align-middle mb-0" id="reportTable">
             <thead>
@@ -98,6 +104,30 @@
         </div>
         <div class="d-flex justify-content-end mt-3">
           <div class="uhs-pager" id="reportPager"></div>
+        </div>
+      </div>
+
+      <!-- PI-wise grouped table -->
+      <div class="uhs-card p-3 d-none" id="piReport">
+        <div class="table-responsive">
+          <table class="table table-uhs align-middle mb-0">
+            <thead>
+              <tr id="piHead">
+                <th class="uhs-sortable" data-col="pi">Principal Investigator</th>
+                <th class="uhs-sortable text-center" data-col="projects">Projects</th>
+                <th class="uhs-sortable text-center" data-col="ongoing">Ongoing</th>
+                <th class="uhs-sortable text-center" data-col="completed">Completed</th>
+                <th class="uhs-sortable" data-col="departments">Departments</th>
+                <th class="uhs-sortable text-end" data-col="totalCost">Total Cost (₹)</th>
+              </tr>
+            </thead>
+            <tbody id="piBody">
+              <tr><td colspan="6" class="text-center text-muted py-4">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="d-flex justify-content-end mt-3">
+          <div class="uhs-pager" id="piPager"></div>
         </div>
       </div>
 
@@ -127,6 +157,13 @@ let curPage = 1;
 const PAGE_SIZE = 20;
 let sortBy = "created_at";
 let sortDir = "desc";
+
+// PI-wise view state
+let reportMode = "detail";   // "detail" | "pi"
+let piGroups = [];           // grouped-by-PI rows (from lastResults)
+let piPage = 1;
+let piSortBy = "projects";
+let piSortDir = "desc";
 
 function currentFilters() {
   return {
@@ -251,32 +288,121 @@ function renderReportPage() {
   renderReportPager();
 }
 
+/* ---------------- PI-wise grouped report ---------------- */
+function groupByPI(rows) {
+  const map = new Map();
+  rows.forEach(p => {
+    const pi = (p.principal_investigator || "—").trim() || "—";
+    const key = pi.toLowerCase();
+    if (!map.has(key)) map.set(key, { pi, projects: 0, ongoing: 0, completed: 0, proposed: 0, terminated: 0, totalCost: 0, depts: new Set() });
+    const g = map.get(key);
+    g.projects++;
+    g.totalCost += Number(p.project_cost || 0);
+    if (p.status === "Ongoing") g.ongoing++;
+    else if (p.status === "Completed") g.completed++;
+    else if (p.status === "Proposed") g.proposed++;
+    else if (p.status === "Terminated") g.terminated++;
+    if (p.department_name) g.depts.add(p.department_name);
+  });
+  return Array.from(map.values()).map(g => ({ ...g, departments: Array.from(g.depts).sort().join(", ") }));
+}
+
+function sortPiGroups() {
+  const dir = piSortDir === "asc" ? 1 : -1;
+  piGroups.sort((a, b) => {
+    let av = a[piSortBy], bv = b[piSortBy];
+    if (piSortBy === "pi" || piSortBy === "departments") return String(av).localeCompare(String(bv)) * dir;
+    return ((av || 0) - (bv || 0)) * dir;
+  });
+}
+
+function updatePiSortIndicators() {
+  document.querySelectorAll("#piHead .uhs-sortable").forEach(th => {
+    th.classList.remove("sort-asc", "sort-desc");
+    if (th.dataset.col === piSortBy) th.classList.add(piSortDir === "asc" ? "sort-asc" : "sort-desc");
+  });
+}
+
+function renderPiPager() {
+  const pager = document.getElementById("piPager");
+  const pages = Math.ceil(piGroups.length / PAGE_SIZE);
+  if (pages <= 1) { pager.innerHTML = ""; return; }
+  const btn = (label, page, disabled, active) =>
+    `<button class="uhs-page-btn ${active ? "active" : ""}" ${disabled ? "disabled" : ""} data-page="${page}">${label}</button>`;
+  let html = btn("‹", piPage - 1, piPage === 1, false);
+  const win = [];
+  for (let p = 1; p <= pages; p++) {
+    if (p === 1 || p === pages || Math.abs(p - piPage) <= 1) win.push(p);
+    else if (win[win.length - 1] !== "…") win.push("…");
+  }
+  win.forEach(p => html += p === "…" ? `<span class="uhs-page-ellipsis">…</span>` : btn(p, p, false, p === piPage));
+  html += btn("›", piPage + 1, piPage === pages, false);
+  pager.innerHTML = html;
+  pager.querySelectorAll(".uhs-page-btn[data-page]").forEach(b =>
+    b.addEventListener("click", () => { piPage = Number(b.dataset.page); renderPiPage(); }));
+}
+
+function renderPiPage() {
+  const tbody = document.getElementById("piBody");
+  updatePiSortIndicators();
+  if (piGroups.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="uhs-empty-state"><i class="bi bi-person-lines-fill"></i>No projects match this report criteria.</div></td></tr>`;
+    renderPiPager();
+    return;
+  }
+  const slice = piGroups.slice((piPage - 1) * PAGE_SIZE, piPage * PAGE_SIZE);
+  tbody.innerHTML = slice.map(g => `
+    <tr>
+      <td class="fw-semibold">${Utils.escapeHtml(g.pi)}</td>
+      <td class="text-center">${g.projects}</td>
+      <td class="text-center">${g.ongoing}</td>
+      <td class="text-center">${g.completed}</td>
+      <td>${Utils.escapeHtml(g.departments || "—")}</td>
+      <td class="text-end">${Utils.formatCurrency(g.totalCost)}</td>
+    </tr>
+  `).join("");
+  renderPiPager();
+}
+
+function refreshView() {
+  const isPi = reportMode === "pi";
+  document.getElementById("detailReport").classList.toggle("d-none", isPi);
+  document.getElementById("piReport").classList.toggle("d-none", !isPi);
+  document.getElementById("modeDetail").className = `btn ${isPi ? "btn-outline-secondary" : "btn-uhs-primary"}`;
+  document.getElementById("modePi").className = `btn ${isPi ? "btn-uhs-primary" : "btn-outline-secondary"}`;
+
+  const totalCost = lastResults.reduce((sum, p) => sum + Number(p.project_cost || 0), 0);
+  if (isPi) {
+    piGroups = groupByPI(lastResults);
+    sortPiGroups();
+    piPage = 1;
+    document.getElementById("reportSummary").textContent =
+      `${piGroups.length} PI(s) across ${lastResults.length} project(s) — Total cost: ${Utils.formatCurrency(totalCost)}`;
+    renderPiPage();
+  } else {
+    document.getElementById("reportSummary").textContent =
+      `${lastResults.length} project(s) — Total cost: ${Utils.formatCurrency(totalCost)}`;
+    renderReportPage();
+  }
+}
+
 async function loadReport() {
-  const tbody = document.getElementById("reportBody");
-  tbody.innerHTML = Utils.skeletonRows(11);
+  const tbody = document.getElementById(reportMode === "pi" ? "piBody" : "reportBody");
+  tbody.innerHTML = Utils.skeletonRows(reportMode === "pi" ? 6 : 11);
   renderChips();
   try {
     const filters = currentFilters();
     // Fetch the full filtered+sorted set once (used for display, summary and export).
     const { data } = await DataService.listProjects(filters, { sortBy, sortDir });
     lastResults = data;
-
-    const totalCost = data.reduce((sum, p) => sum + Number(p.project_cost || 0), 0);
-    document.getElementById("reportSummary").textContent =
-      `${data.length} project(s) — Total cost: ${Utils.formatCurrency(totalCost)}`;
-
-    renderReportPage();
+    refreshView();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="11" class="text-center text-danger py-4">${Utils.escapeHtml(err.message)}</td></tr>`;
+    const cols = reportMode === "pi" ? 6 : 11;
+    tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center text-danger py-4">${Utils.escapeHtml(err.message)}</td></tr>`;
   }
 }
 
-function exportPdf() {
-  if (lastResults.length === 0) { Utils.toast("No data to export.", "warning"); return; }
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: "landscape" });
-
-  // Branded header band
+function pdfHeader(doc, subtitle, count) {
   doc.setFillColor(34, 102, 55);
   doc.rect(0, 0, doc.internal.pageSize.getWidth(), 24, "F");
   doc.setTextColor(255, 255, 255);
@@ -284,17 +410,37 @@ function exportPdf() {
   doc.text("University of Horticultural Sciences", 14, 11);
   doc.setFontSize(10);
   doc.setTextColor(232, 179, 77);
-  doc.text("UHS-PIMS — Project Report", 14, 18);
+  doc.text(subtitle, 14, 18);
   doc.setFontSize(9);
   doc.setTextColor(90);
-  doc.text(`Generated: ${new Date().toLocaleString("en-IN")}  |  Total Records: ${lastResults.length}`, 14, 31);
+  doc.text(`Generated: ${new Date().toLocaleString("en-IN")}  |  Total Records: ${count}`, 14, 31);
+}
 
+function exportPdf() {
+  if (lastResults.length === 0) { Utils.toast("No data to export.", "warning"); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape" });
+
+  if (reportMode === "pi") {
+    pdfHeader(doc, "UHS-PIMS — PI-wise Report", piGroups.length);
+    doc.autoTable({
+      startY: 36,
+      head: [["Principal Investigator", "Projects", "Ongoing", "Completed", "Proposed", "Terminated", "Departments", "Total Cost"]],
+      body: piGroups.map(g => [g.pi, g.projects, g.ongoing, g.completed, g.proposed, g.terminated, g.departments || "—", Utils.formatCurrency(g.totalCost)]),
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [46, 125, 50] },
+      alternateRowStyles: { fillColor: [248, 249, 250] }
+    });
+    doc.save(`UHS-PIMS-PI-Report-${Date.now()}.pdf`);
+    return;
+  }
+
+  pdfHeader(doc, "UHS-PIMS — Project Report", lastResults.length);
   const rows = lastResults.map(p => [
     p.title, p.principal_investigator, p.designation || "—", p.department_name || "—", p.college_name || "—",
     p.funding_agency_name || "—", p.funding_type, Utils.formatCurrency(p.project_cost),
     Utils.formatDate(p.start_date), Utils.formatDate(p.end_date), p.status
   ]);
-
   doc.autoTable({
     startY: 36,
     head: [["Title", "PI", "Designation", "Department", "College", "Agency", "Funding Type", "Cost", "Start", "End", "Status"]],
@@ -303,32 +449,42 @@ function exportPdf() {
     headStyles: { fillColor: [46, 125, 50] },
     alternateRowStyles: { fillColor: [248, 249, 250] }
   });
-
   doc.save(`UHS-PIMS-Report-${Date.now()}.pdf`);
 }
 
 function exportExcel() {
   if (lastResults.length === 0) { Utils.toast("No data to export.", "warning"); return; }
-  const rows = lastResults.map(p => ({
-    "Title": p.title,
-    "Principal Investigator": p.principal_investigator,
-    "Co-PI": p.co_principal_investigator || "",
-    "Designation": p.designation || "",
-    "Department": p.department_name || "",
-    "College": p.college_name || "",
-    "Funding Agency": p.funding_agency_name || "",
-    "Funding Type": p.funding_type,
-    "Project Cost": p.project_cost,
-    "Start Date": p.start_date || "",
-    "End Date": p.end_date || "",
-    "Duration (months)": p.duration_months || "",
-    "Status": p.status,
-    "Remarks": p.remarks || ""
-  }));
+  let rows, sheet, fname;
+  if (reportMode === "pi") {
+    rows = piGroups.map(g => ({
+      "Principal Investigator": g.pi, "Projects": g.projects, "Ongoing": g.ongoing,
+      "Completed": g.completed, "Proposed": g.proposed, "Terminated": g.terminated,
+      "Departments": g.departments || "", "Total Cost": g.totalCost
+    }));
+    sheet = "By PI"; fname = `UHS-PIMS-PI-Report-${Date.now()}.xlsx`;
+  } else {
+    rows = lastResults.map(p => ({
+      "Title": p.title,
+      "Principal Investigator": p.principal_investigator,
+      "Co-PI": p.co_principal_investigator || "",
+      "Designation": p.designation || "",
+      "Department": p.department_name || "",
+      "College": p.college_name || "",
+      "Funding Agency": p.funding_agency_name || "",
+      "Funding Type": p.funding_type,
+      "Project Cost": p.project_cost,
+      "Start Date": p.start_date || "",
+      "End Date": p.end_date || "",
+      "Duration (months)": p.duration_months || "",
+      "Status": p.status,
+      "Remarks": p.remarks || ""
+    }));
+    sheet = "Projects"; fname = `UHS-PIMS-Report-${Date.now()}.xlsx`;
+  }
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Projects");
-  XLSX.writeFile(wb, `UHS-PIMS-Report-${Date.now()}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, sheet);
+  XLSX.writeFile(wb, fname);
 }
 
 (async () => {
@@ -352,6 +508,22 @@ function exportExcel() {
     else { sortBy = col; sortDir = "asc"; }
     applyReport();
   });
+
+  // PI-view: header sort (client-side, no refetch needed)
+  document.getElementById("piHead").addEventListener("click", (e) => {
+    const th = e.target.closest(".uhs-sortable");
+    if (!th) return;
+    const col = th.dataset.col;
+    if (piSortBy === col) piSortDir = piSortDir === "asc" ? "desc" : "asc";
+    else { piSortBy = col; piSortDir = col === "pi" || col === "departments" ? "asc" : "desc"; }
+    sortPiGroups();
+    piPage = 1;
+    renderPiPage();
+  });
+
+  // View mode toggle (Detailed / By PI)
+  document.getElementById("modeDetail").addEventListener("click", () => { reportMode = "detail"; refreshView(); });
+  document.getElementById("modePi").addEventListener("click", () => { reportMode = "pi"; refreshView(); });
 
   document.getElementById("exportPdfBtn").addEventListener("click", exportPdf);
   document.getElementById("exportExcelBtn").addEventListener("click", exportExcel);

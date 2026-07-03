@@ -174,6 +174,25 @@ const Utils = {
     return Math.max(0, (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()));
   },
 
+  // Retirement date = date of birth + N years (superannuation age).
+  retirementDate(dob, age) {
+    if (!dob) return null;
+    const years = age || (typeof APP_CONFIG !== "undefined" ? APP_CONFIG.retirementAge : 62);
+    const d = new Date(dob);
+    if (Number.isNaN(d.getTime())) return null;
+    d.setFullYear(d.getFullYear() + years);
+    return d;
+  },
+
+  // Whole months from today until a date (negative if already past).
+  monthsUntil(date) {
+    if (!date) return null;
+    const d = date instanceof Date ? date : new Date(date);
+    if (Number.isNaN(d.getTime())) return null;
+    const now = new Date();
+    return (d.getFullYear() - now.getFullYear()) * 12 + (d.getMonth() - now.getMonth());
+  },
+
   getQueryParam(name) {
     return new URLSearchParams(window.location.search).get(name);
   },
