@@ -444,7 +444,7 @@ function render() {
         <td>${rd ? Utils.formatDate(rd) : "—"}</td>
         <td>${statusBadge(e)}</td>
         <td class="text-end">${projBtn}</td>
-        <td class="text-end">
+        <td class="text-end text-nowrap">
           <button class="btn btn-sm btn-outline-secondary me-1" onclick="openView('${e.id}')" title="View details"><i class="bi bi-eye"></i></button>
           <button class="btn btn-sm btn-outline-secondary me-1 admin-only" onclick="openEditModal('${e.id}')" title="Edit"><i class="bi bi-pencil"></i></button>
           <button class="btn btn-sm btn-outline-danger admin-only" onclick="deleteWithUndo('${e.id}')" title="Delete"><i class="bi bi-trash"></i></button>
