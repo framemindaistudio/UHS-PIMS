@@ -17,6 +17,8 @@ const APP_CONFIG = {
     footerName: "University of Horticultural Sciences, Bagalkot"
   },
   fundingTypes: ["University Funded", "External Funded"],
+  // Project categories used for role-based access (case worker -> scheme[]).
+  schemes: ["External Funded", "RKVY", "TBI", "Inhouse", "MLT", "LSD", "Farm Trials", "Chemical Testing", "Adhoc", "CSS-MIDH", "Revolving Fund"],
   statusOptions: ["Ongoing", "Completed", "Proposed", "Terminated"],
   // Superannuation age — retirement date = date of birth + this many years.
   retirementAge: 62,

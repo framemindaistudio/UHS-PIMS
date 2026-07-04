@@ -66,7 +66,7 @@ const DataService = {
   // ---------------- Projects ----------------
   // Sortable columns exposed to the UI (whitelist — prevents arbitrary order-by).
   PROJECT_SORT_COLUMNS: ["title", "principal_investigator", "designation", "department_name",
-    "college_name", "funding_agency_name", "funding_type", "project_cost", "start_date", "end_date", "status", "created_at"],
+    "college_name", "funding_agency_name", "funding_type", "scheme", "project_cost", "start_date", "end_date", "status", "created_at"],
 
   /**
    * List projects with optional filters, sorting and pagination.
@@ -87,6 +87,8 @@ const DataService = {
     }
     if (filters.status) query = query.eq("status", filters.status);
     if (filters.fundingType) query = query.eq("funding_type", filters.fundingType);
+    if (filters.scheme === "__none__") query = query.is("scheme", null);
+    else if (filters.scheme) query = query.eq("scheme", filters.scheme);
     if (filters.departmentId) query = query.eq("department_id", filters.departmentId);
     if (filters.collegeId) query = query.eq("college_id", filters.collegeId);
     if (filters.fundingAgencyId) query = query.eq("funding_agency_id", filters.fundingAgencyId);

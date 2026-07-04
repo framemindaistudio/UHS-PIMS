@@ -57,22 +57,31 @@ const Auth = {
     return session?.user?.email || "Admin";
   },
 
-  // Cached role of the logged-in user: 'admin' (read+write) or 'user' (read-only).
-  _role: undefined,
-  async getRole() {
-    if (this._role !== undefined) return this._role;
+  // Cached profile: role + schemes.
+  //   role: 'admin' (client), 'director', 'case_worker' (scoped), 'user' (read-only)
+  //   schemes: array of project categories a case_worker may see/edit
+  _profile: undefined,
+  async getProfile() {
+    if (this._profile !== undefined) return this._profile;
     const session = await this.getSession();
-    if (!session) return (this._role = null);
+    if (!session) return (this._profile = null);
     const { data, error } = await supabaseClient
-      .from("admin_users").select("role").eq("id", session.user.id).single();
+      .from("admin_users").select("role, schemes").eq("id", session.user.id).single();
     // Fail safe to the least-privileged role if the lookup fails.
-    this._role = error ? "user" : (data?.role || "user");
-    return this._role;
+    this._profile = error
+      ? { role: "user", schemes: [] }
+      : { role: data?.role || "user", schemes: data?.schemes || [] };
+    return this._profile;
   },
+  async getRole()    { return (await this.getProfile())?.role || null; },
+  async getSchemes() { return (await this.getProfile())?.schemes || []; },
 
-  async isAdmin() {
-    return (await this.getRole()) === "admin";
-  }
+  async isAdmin()    { return (await this.getRole()) === "admin"; },
+  async isDirector() { return (await this.getRole()) === "director"; },
+  // admin + director: full access to all data (master data, employees, projects)
+  async canManageAll() { const r = await this.getRole(); return r === "admin" || r === "director"; },
+  // admin + director + case_worker: may edit projects (case_worker only within their schemes, enforced by RLS)
+  async canEditProjects() { const r = await this.getRole(); return r === "admin" || r === "director" || r === "case_worker"; }
 };
 
 // Listen for auth state changes (e.g. token refresh, sign-out in another tab)

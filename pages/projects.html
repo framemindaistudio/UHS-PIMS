@@ -28,7 +28,7 @@
           <h5 class="fw-bold mb-0">Projects</h5>
           <p class="text-muted small mb-0">Manage all research projects</p>
         </div>
-        <div class="d-flex gap-2 admin-only">
+        <div class="d-flex gap-2 can-edit-projects">
           <button class="btn btn-outline-success" id="importBtn"><i class="bi bi-file-earmark-arrow-up"></i> Import Excel</button>
           <a href="project-form.html" class="btn btn-uhs-primary"><i class="bi bi-plus-lg"></i> Add Project</a>
         </div>
@@ -51,6 +51,11 @@
           <div class="col-6 col-md-2">
             <select id="filterFundingType" class="form-select">
               <option value="">All Funding</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-2">
+            <select id="filterScheme" class="form-select">
+              <option value="">All Schemes</option>
             </select>
           </div>
           <div class="col-6 col-md-2">
@@ -77,7 +82,7 @@
       </div>
 
       <!-- Bulk action bar (admin only) -->
-      <div id="bulkBar" class="uhs-bulk-bar d-none admin-only mb-3">
+      <div id="bulkBar" class="uhs-bulk-bar d-none can-edit-projects mb-3">
         <span><strong id="bulkCount">0</strong> selected</span>
         <button class="btn btn-sm btn-danger" id="bulkDeleteBtn"><i class="bi bi-trash"></i> Delete selected</button>
         <button class="btn btn-sm btn-link text-decoration-none" id="bulkClearBtn">Clear</button>
@@ -89,18 +94,19 @@
           <table class="table table-uhs align-middle mb-0">
             <thead>
               <tr id="projectsHead">
-                <th class="admin-only" style="width:36px;"><input type="checkbox" class="form-check-input" id="selectAll" title="Select all on this page"></th>
+                <th class="can-edit-projects" style="width:36px;"><input type="checkbox" class="form-check-input" id="selectAll" title="Select all on this page"></th>
                 <th class="uhs-sortable" data-col="title">Title</th>
                 <th class="uhs-sortable" data-col="principal_investigator">Principal Investigator</th>
                 <th class="uhs-sortable" data-col="department_name">Department</th>
                 <th class="uhs-sortable" data-col="funding_type">Funding Type</th>
+                <th class="uhs-sortable" data-col="scheme">Scheme</th>
                 <th class="uhs-sortable" data-col="project_cost">Cost</th>
                 <th class="uhs-sortable" data-col="status">Status</th>
-                <th class="text-end admin-only">Actions</th>
+                <th class="text-end can-edit-projects">Actions</th>
               </tr>
             </thead>
             <tbody id="projectsBody">
-              <tr><td colspan="8" class="text-center text-muted py-4">Loading...</td></tr>
+              <tr><td colspan="9" class="text-center text-muted py-4">Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -180,6 +186,12 @@ async function loadFilterOptions() {
     fundingSel.insertAdjacentHTML("beforeend", `<option value="${f}">${f}</option>`);
   });
 
+  const schemeSel = document.getElementById("filterScheme");
+  (APP_CONFIG.schemes || []).forEach(s => {
+    schemeSel.insertAdjacentHTML("beforeend", `<option value="${s}">${s}</option>`);
+  });
+  schemeSel.insertAdjacentHTML("beforeend", `<option value="__none__">— Untagged —</option>`);
+
   departmentsCache = await DataService.listDepartments();
   const deptSel = document.getElementById("filterDepartment");
   departmentsCache.forEach(d => {
@@ -192,6 +204,7 @@ function currentFilters() {
     search: document.getElementById("searchInput").value.trim(),
     status: document.getElementById("filterStatus").value,
     fundingType: document.getElementById("filterFundingType").value,
+    scheme: document.getElementById("filterScheme").value,
     departmentId: document.getElementById("filterDepartment").value
   };
 }
@@ -204,9 +217,11 @@ function renderChips() {
   const funding = document.getElementById("filterFundingType").value;
   const deptId = document.getElementById("filterDepartment").value;
 
+  const scheme = document.getElementById("filterScheme").value;
   if (search) chips.push({ ctrl: "searchInput", label: `Search: "${search}"` });
   if (status) chips.push({ ctrl: "filterStatus", label: status });
   if (funding) chips.push({ ctrl: "filterFundingType", label: funding });
+  if (scheme) chips.push({ ctrl: "filterScheme", label: scheme === "__none__" ? "Untagged" : scheme });
   if (deptId) {
     const d = departmentsCache.find(x => x.id === deptId);
     chips.push({ ctrl: "filterDepartment", label: d ? d.name : "Department" });
@@ -272,7 +287,7 @@ async function loadProjects() {
       count === 0 ? "0 projects found" : `Showing ${from}–${to} of ${count} project(s)`;
 
     if (projects.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8"><div class="uhs-empty-state"><i class="bi bi-flower3"></i>No projects match your search/filters.</div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9"><div class="uhs-empty-state"><i class="bi bi-flower3"></i>No projects match your search/filters.</div></td></tr>`;
       renderPager(count);
       updateBulkBar();
       return;
@@ -280,14 +295,15 @@ async function loadProjects() {
 
     tbody.innerHTML = projects.map(p => `
       <tr data-id="${p.id}">
-        <td class="admin-only"><input type="checkbox" class="form-check-input row-select" value="${p.id}"></td>
+        <td class="can-edit-projects"><input type="checkbox" class="form-check-input row-select" value="${p.id}"></td>
         <td class="fw-semibold">${Utils.escapeHtml(p.title)}</td>
         <td>${Utils.escapeHtml(p.principal_investigator)}</td>
         <td>${Utils.escapeHtml(p.department_name || "—")}</td>
         <td>${Utils.escapeHtml(p.funding_type)}</td>
+        <td>${p.scheme ? Utils.escapeHtml(p.scheme) : '<span class="text-muted">—</span>'}</td>
         <td>${Utils.formatCurrency(p.project_cost)}</td>
         <td>${Utils.statusBadge(p.status)}</td>
-        <td class="text-end text-nowrap admin-only">
+        <td class="text-end text-nowrap can-edit-projects">
           <a href="project-form.html?id=${p.id}" class="btn btn-sm btn-outline-secondary me-1" title="Edit"><i class="bi bi-pencil"></i></a>
           <button class="btn btn-sm btn-outline-danger" title="Delete" onclick="deleteWithUndo('${p.id}')"><i class="bi bi-trash"></i></button>
         </td>
@@ -297,7 +313,7 @@ async function loadProjects() {
     wireRowSelection();
   } catch (err) {
     console.error(err);
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Failed to load projects: ${Utils.escapeHtml(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Failed to load projects: ${Utils.escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -400,6 +416,7 @@ function applyPreset(index) {
   document.getElementById("searchInput").value = f.search || "";
   document.getElementById("filterStatus").value = f.status || "";
   document.getElementById("filterFundingType").value = f.fundingType || "";
+  document.getElementById("filterScheme").value = f.scheme || "";
   document.getElementById("filterDepartment").value = f.departmentId || "";
   applyFilters();
 }
@@ -598,11 +615,13 @@ async function runImport() {
   document.getElementById("searchInput").addEventListener("input", Utils.debounce(applyFilters, 350));
   document.getElementById("filterStatus").addEventListener("change", applyFilters);
   document.getElementById("filterFundingType").addEventListener("change", applyFilters);
+  document.getElementById("filterScheme").addEventListener("change", applyFilters);
   document.getElementById("filterDepartment").addEventListener("change", applyFilters);
   document.getElementById("clearFiltersBtn").addEventListener("click", () => {
     document.getElementById("searchInput").value = "";
     document.getElementById("filterStatus").value = "";
     document.getElementById("filterFundingType").value = "";
+    document.getElementById("filterScheme").value = "";
     document.getElementById("filterDepartment").value = "";
     applyFilters();
   });

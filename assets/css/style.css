@@ -483,8 +483,19 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 
 .cursor-pointer { cursor: pointer; }
 
-/* Read-only viewers: hide all write/admin-only controls */
+/* ---- Role-based UI gating ----
+   .owner-only        = client/admin only (user management)
+   .admin-only        = admin + Director of Research (all data writes: master data, employees)
+   .can-edit-projects = admin + director + case worker (project writes)
+   Body gets: role-director | role-caseworker | role-viewer  (admin gets none) */
+.role-director .owner-only,
+.role-caseworker .owner-only,
+.role-viewer .owner-only { display: none !important; }
+
+.role-caseworker .admin-only,
 .role-viewer .admin-only { display: none !important; }
+
+.role-viewer .can-edit-projects { display: none !important; }
 
 /* Read-only viewers: make disabled fields look intentional, not broken */
 .role-viewer .form-control:disabled,

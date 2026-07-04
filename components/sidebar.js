@@ -20,7 +20,7 @@ function renderSidebar(activeKey) {
   if (!mount) return;
 
   const links = SIDEBAR_LINKS.map(link => `
-    <a href="${link.href}" class="uhs-nav-link ${link.key === activeKey ? "active" : ""} ${link.adminOnly ? "admin-only" : ""}">
+    <a href="${link.href}" class="uhs-nav-link ${link.key === activeKey ? "active" : ""} ${link.adminOnly ? "owner-only" : ""}">
       <i class="bi ${link.icon}"></i>
       <span>${link.label}</span>
     </a>
@@ -89,12 +89,16 @@ function renderSidebar(activeKey) {
     overlay.classList.remove("show");
   });
 
-  // Apply read-only gating for non-admin (viewer) accounts.
+  // Apply role-based UI gating. admin = client (no class); director = all data;
+  // case_worker = only their projects; user = read-only. RLS enforces the real rules.
   (async () => {
     try {
-      if (typeof Auth !== "undefined" && !(await Auth.isAdmin())) {
-        document.body.classList.add("role-viewer");
-      }
+      if (typeof Auth === "undefined") return;
+      const role = await Auth.getRole();
+      if (role === "admin") return;                                   // full access
+      if (role === "director") document.body.classList.add("role-director");
+      else if (role === "case_worker") document.body.classList.add("role-caseworker");
+      else document.body.classList.add("role-viewer");                // legacy read-only viewer
     } catch (_) { /* leave as admin-capable; RLS still enforces writes */ }
   })();
 }

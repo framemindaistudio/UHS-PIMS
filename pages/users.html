@@ -94,9 +94,14 @@
 <script src="../components/onboarding.js"></script>
 <script>
 function roleBadge(role) {
-  return role === "admin"
-    ? `<span class="badge-status badge-completed">Administrator</span>`
-    : `<span class="badge-status badge-proposed">Viewer</span>`;
+  const map = {
+    admin:       ["badge-completed", "Administrator"],
+    director:    ["badge-ongoing",   "Director of Research"],
+    case_worker: ["badge-proposed",  "Case Worker"],
+    user:        ["badge-proposed",  "Viewer"]
+  };
+  const [cls, label] = map[role] || ["badge-proposed", role || "Viewer"];
+  return `<span class="badge-status ${cls}">${label}</span>`;
 }
 
 async function loadUsers() {
@@ -112,7 +117,7 @@ async function loadUsers() {
       <tr>
         <td class="fw-semibold">${Utils.escapeHtml(u.full_name && !u.full_name.includes("@") ? u.full_name : "—")}</td>
         <td>${Utils.escapeHtml(u.email || "—")}</td>
-        <td>${roleBadge(u.role)}</td>
+        <td>${roleBadge(u.role)}${u.role === "case_worker" && u.schemes && u.schemes.length ? `<div class="text-muted small mt-1">${u.schemes.map(s => Utils.escapeHtml(s)).join(", ")}</div>` : ""}</td>
         <td>${Utils.formatDate(u.created_at)}</td>
       </tr>
     `).join("");

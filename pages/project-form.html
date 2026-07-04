@@ -94,6 +94,11 @@
               <label class="form-label fw-semibold">Project Cost (₹)</label>
               <input type="number" min="0" step="0.01" class="form-control" id="cost">
             </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Scheme / Category</label>
+              <select class="form-select" id="scheme"><option value="">Select scheme</option></select>
+              <div class="form-text">Controls which case worker sees this project.</div>
+            </div>
           </div>
         </div>
 
@@ -183,6 +188,9 @@ async function loadDropdowns() {
   const statusSel = document.getElementById("status");
   APP_CONFIG.statusOptions.forEach(s => statusSel.insertAdjacentHTML("beforeend", `<option value="${s}">${s}</option>`));
 
+  const schemeSel = document.getElementById("scheme");
+  (APP_CONFIG.schemes || []).forEach(s => schemeSel.insertAdjacentHTML("beforeend", `<option value="${s}">${s}</option>`));
+
   const designationSel = document.getElementById("designation");
   APP_CONFIG.designationOptions.forEach(d => designationSel.insertAdjacentHTML("beforeend", `<option value="${d}">${d}</option>`));
 }
@@ -239,6 +247,7 @@ async function loadExistingProject(id) {
   document.getElementById("startDate").value = p.start_date || "";
   document.getElementById("endDate").value = p.end_date || "";
   document.getElementById("duration").value = p.duration_months ?? "";
+  document.getElementById("scheme").value = p.scheme || "";
   document.getElementById("remarks").value = p.remarks || "";
 }
 
@@ -257,6 +266,7 @@ function buildPayload() {
     start_date: document.getElementById("startDate").value || null,
     end_date: document.getElementById("endDate").value || null,
     duration_months: document.getElementById("duration").value || null,
+    scheme: document.getElementById("scheme").value || null,
     remarks: document.getElementById("remarks").value.trim() || null
   };
 }
@@ -314,10 +324,20 @@ async function confirmLeave(targetHref) {
     }
   }
 
-  const isAdmin = await Auth.isAdmin();
+  const canEdit = await Auth.canEditProjects();
+
+  // Case workers may only file projects under their own scheme(s).
+  if ((await Auth.getRole()) === "case_worker") {
+    const mine = await Auth.getSchemes();
+    const sel = document.getElementById("scheme");
+    const cur = sel.value;
+    sel.innerHTML = mine.map(s => `<option value="${s}">${Utils.escapeHtml(s)}</option>`).join("");
+    sel.value = mine.includes(cur) ? cur : (mine.length === 1 ? mine[0] : "");
+    sel.required = true;
+  }
 
   // Read-only viewers can see the form but not change/save it.
-  if (!isAdmin) {
+  if (!canEdit) {
     document.getElementById("formHeading").textContent = editId ? "View Project" : "Project";
     document.querySelectorAll("#projectForm input, #projectForm select, #projectForm textarea")
       .forEach(el => el.disabled = true);
