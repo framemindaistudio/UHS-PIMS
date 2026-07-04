@@ -17,7 +17,8 @@
  * -----------------------------------------------------------
  */
 const PI_ALIASES = {
-  // #0021 — confirmed by client (2026-07-03): only "Dr. H. Amarananjundeswara" (8 projects).
+  // Confirmed by client (2026-07-03): only "Dr. H. Amarananjundeswara" (8 projects).
   // "Dr. Amarananjudeshwar" (4 projects) is NOT this person — do not add it.
-  "Dr. Amarananjundeshwara": ["Dr. H. Amarananjundeswara"]
+  // (Name in the official staff file is "Dr. Amarananjundeshwara H".)
+  "Dr. Amarananjundeshwara H": ["Dr. H. Amarananjundeswara"]
 };

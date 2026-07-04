@@ -54,7 +54,7 @@
           <table class="table table-uhs align-middle mb-0">
             <thead>
               <tr id="empHead">
-                <th class="uhs-sortable" data-col="emp_no" style="width:78px">No.</th>
+                <th class="uhs-sortable" data-col="emp_no" style="width:118px">Emp No</th>
                 <th class="uhs-sortable" data-col="name">Name</th>
                 <th>Designation</th>
                 <th>Discipline</th>
@@ -244,7 +244,7 @@ function buildProjectIndex() {
     projBySurname.get(p._parts.surname).push(p);
   });
 }
-function empNoLabel(e) { return e.emp_no ? String(e.emp_no).padStart(4, "0") : "—"; }
+function empNoLabel(e) { return e.employee_no || "—"; }
 
 // db column -> add/edit input id (single source of truth for the form)
 const FIELDS = {
@@ -322,8 +322,10 @@ function openView(id) {
   document.getElementById("vBody").innerHTML = `
     ${projBtn}
     <div class="row g-3 mb-2">
+      ${F("Employee No", e.employee_no)}
       ${F("Designation", e.designation)}
       ${F("Academic Level", e.academic_level)}
+      ${F("ABAC / Station code", e.abac)}
       ${F("Discipline", e.discipline)}
       ${F("Present Position", e.present_position)}
       ${F("Working Office", e.working_office)}
