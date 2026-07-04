@@ -217,7 +217,12 @@ function initialsCompatible(a, b) {
   for (const x of small) if (!big.has(x)) return false;
   return true;
 }
-function normPI(s) { return String(s || "").toLowerCase().replace(/\./g, " ").replace(/\s+/g, " ").trim(); }
+function normPI(s) {
+  return String(s || "").toLowerCase()
+    .replace(/[.,]/g, " ")
+    .replace(/\b(?:dr|prof|smt|sri|shri|mr|mrs|kum|km|miss|er|ms)\b/g, " ")
+    .replace(/\s+/g, " ").trim();
+}
 function matchedProjects(emp) {
   if (!emp._parts) emp._parts = nameParts(emp.name);
   const out = new Set();

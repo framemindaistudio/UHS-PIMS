@@ -20,5 +20,13 @@ const PI_ALIASES = {
   // Confirmed by client (2026-07-03): only "Dr. H. Amarananjundeswara" (8 projects).
   // "Dr. Amarananjudeshwar" (4 projects) is NOT this person — do not add it.
   // (Name in the official staff file is "Dr. Amarananjundeshwara H".)
-  "Dr. Amarananjundeshwara H": ["Dr. H. Amarananjundeswara"]
+  "Dr. Amarananjundeshwara H": ["Dr. H. Amarananjundeswara"],
+
+  // Confirmed by client (2026-07-04) — spelling variants used on projects.
+  // (Matching ignores honorifics/commas, so one spelling per person catches all.)
+  "Dr. Swetha B.S.":            ["Dr. Shwetha B. S"],       // NOT "Swetha Hiremath" (diff. person)
+  "Dr. Namitha B. Raut":       ["Dr. Namita Raut"],
+  "Dr. Suresh G J":            ["Dr. Suresha G. J"],
+  "Dr. Kirankumar Gorabal":    ["Dr. Kiran Kumar Gorbal"],
+  "Dr. Adbul Rahaman M. Nadaf": ["Dr. A. M. Nadaf"]
 };
