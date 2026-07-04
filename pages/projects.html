@@ -287,7 +287,7 @@ async function loadProjects() {
         <td>${Utils.escapeHtml(p.funding_type)}</td>
         <td>${Utils.formatCurrency(p.project_cost)}</td>
         <td>${Utils.statusBadge(p.status)}</td>
-        <td class="text-end admin-only">
+        <td class="text-end text-nowrap admin-only">
           <a href="project-form.html?id=${p.id}" class="btn btn-sm btn-outline-secondary me-1" title="Edit"><i class="bi bi-pencil"></i></a>
           <button class="btn btn-sm btn-outline-danger" title="Delete" onclick="deleteWithUndo('${p.id}')"><i class="bi bi-trash"></i></button>
         </td>
