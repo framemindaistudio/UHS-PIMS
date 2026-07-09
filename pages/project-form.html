@@ -142,6 +142,19 @@
           </div>
         </div>
 
+        <!-- Section: Report Links -->
+        <div class="uhs-form-section">
+          <div class="uhs-form-section-head">
+            <span class="sec-icon"><i class="bi bi-link-45deg"></i></span>
+            <div><h6>Project Report Links</h6><div class="sec-sub">Attach links to progress / completion reports, documents or drive folders</div></div>
+          </div>
+          <div id="reportLinksList" class="d-flex flex-column gap-2"></div>
+          <div id="reportLinksEmpty" class="text-muted small">No report links added yet.</div>
+          <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="addReportLinkBtn">
+            <i class="bi bi-plus-lg"></i> Add report link
+          </button>
+        </div>
+
         <div class="d-flex justify-content-end gap-2 mt-4">
           <a href="projects.html" class="btn btn-outline-secondary">Cancel</a>
           <button type="submit" class="btn btn-uhs-primary" id="saveBtn">
@@ -232,6 +245,55 @@ function syncDuration() {
   endInput.addEventListener("change", recalc);
 }
 
+// ---- Project report links (repeatable Label + URL rows) ----
+function makeReportLinkRow(label = "", url = "") {
+  const row = document.createElement("div");
+  row.className = "report-link-row row g-2 align-items-center";
+  row.innerHTML = `
+    <div class="col-md-4">
+      <input type="text" class="form-control form-control-sm rl-label" placeholder="Label (e.g. Progress Report 2024)">
+    </div>
+    <div class="col-md-6">
+      <input type="url" class="form-control form-control-sm rl-url" placeholder="https://...">
+    </div>
+    <div class="col-md-2 d-flex gap-1">
+      <a class="btn btn-sm btn-outline-primary rl-open disabled" target="_blank" rel="noopener" title="Open link" tabindex="-1"><i class="bi bi-box-arrow-up-right"></i></a>
+      <button type="button" class="btn btn-sm btn-outline-danger rl-remove" title="Remove link"><i class="bi bi-trash"></i></button>
+    </div>`;
+  const labelInput = row.querySelector(".rl-label");
+  const urlInput = row.querySelector(".rl-url");
+  const openBtn = row.querySelector(".rl-open");
+  labelInput.value = label;
+  urlInput.value = url;
+  const syncOpen = () => {
+    const u = urlInput.value.trim();
+    if (u) { openBtn.href = u; openBtn.classList.remove("disabled"); openBtn.removeAttribute("tabindex"); }
+    else { openBtn.removeAttribute("href"); openBtn.classList.add("disabled"); openBtn.setAttribute("tabindex", "-1"); }
+  };
+  syncOpen();
+  urlInput.addEventListener("input", () => { syncOpen(); markDirty(); });
+  labelInput.addEventListener("input", markDirty);
+  row.querySelector(".rl-remove").addEventListener("click", () => { row.remove(); markDirty(); refreshReportLinksEmpty(); });
+  return row;
+}
+function addReportLinkRow(label = "", url = "") {
+  document.getElementById("reportLinksList").appendChild(makeReportLinkRow(label, url));
+  refreshReportLinksEmpty();
+}
+function refreshReportLinksEmpty() {
+  const has = document.querySelectorAll("#reportLinksList .report-link-row").length > 0;
+  document.getElementById("reportLinksEmpty").classList.toggle("d-none", has);
+}
+function collectReportLinks() {
+  const out = [];
+  document.querySelectorAll("#reportLinksList .report-link-row").forEach(row => {
+    const url = row.querySelector(".rl-url").value.trim();
+    const label = row.querySelector(".rl-label").value.trim();
+    if (url) out.push({ label: label || url, url });
+  });
+  return out;
+}
+
 async function loadExistingProject(id) {
   const p = await DataService.getProject(id);
   document.getElementById("title").value = p.title || "";
@@ -249,6 +311,10 @@ async function loadExistingProject(id) {
   document.getElementById("duration").value = p.duration_months ?? "";
   document.getElementById("scheme").value = p.scheme || "";
   document.getElementById("remarks").value = p.remarks || "";
+  const list = document.getElementById("reportLinksList");
+  list.innerHTML = "";
+  (Array.isArray(p.report_links) ? p.report_links : []).forEach(l => addReportLinkRow(l.label || "", l.url || ""));
+  refreshReportLinksEmpty();
 }
 
 function buildPayload() {
@@ -267,7 +333,8 @@ function buildPayload() {
     end_date: document.getElementById("endDate").value || null,
     duration_months: document.getElementById("duration").value || null,
     scheme: document.getElementById("scheme").value || null,
-    remarks: document.getElementById("remarks").value.trim() || null
+    remarks: document.getElementById("remarks").value.trim() || null,
+    report_links: collectReportLinks()
   };
 }
 
@@ -313,6 +380,7 @@ async function confirmLeave(targetHref) {
   await loadDropdowns();
   syncCollegeFromDepartment();
   syncDuration();
+  document.getElementById("addReportLinkBtn").addEventListener("click", () => addReportLinkRow());
 
   editId = Utils.getQueryParam("id");
   if (editId) {
@@ -342,6 +410,9 @@ async function confirmLeave(targetHref) {
     document.querySelectorAll("#projectForm input, #projectForm select, #projectForm textarea")
       .forEach(el => el.disabled = true);
     document.getElementById("saveBtn").classList.add("d-none");
+    // Viewers can still click through report links, but not add/remove them.
+    document.getElementById("addReportLinkBtn").classList.add("d-none");
+    document.querySelectorAll(".rl-remove").forEach(b => b.classList.add("d-none"));
   } else {
     // Only editors get dirty-tracking + leave guards.
     document.querySelectorAll("#projectForm input, #projectForm select, #projectForm textarea")
